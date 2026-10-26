@@ -4,6 +4,9 @@
 # WhatsNew\<x.y>.jpg (1920 x 340, made from the studio's banner template, the month it came out); the others
 # show their month's picture, WhatsNew\m<MM>.jpg, which must exist for every month listed.
 
+## 1.2 | 2026-10-26 | Counted, nothing more
+- When Launchpad downloads an app, it tells the site which one and how (installed, updated, trial or bought), so we can see how many people get our apps through Launchpad. It's the same anonymous count the site keeps for its own download buttons: no account, no address, nothing about your PC.
+
 ## 1.1 | 2026-10-26 | Your paid apps update from here too
 Launchpad now knows which of your apps you've bought, and installs their updates with the rest.
 **Bought apps, updated in the same go**

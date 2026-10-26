@@ -33,6 +33,7 @@ public static class SelfTest
             Notices(temp);
             Staging(temp);
             Registration(temp);
+            Counting();
         }
         catch (Exception ex) { Check(false, $"crashed: {ex}"); }
         finally
@@ -300,6 +301,28 @@ public static class SelfTest
             using (var w = new StreamWriter(archive.CreateEntry("Planner.exe").Open())) w.Write("flat");
         Installer.Unzip(zip, Path.Combine(temp, "Flat"));
         Check(File.ReadAllText(Path.Combine(temp, "Flat", "Planner.exe")) == "flat", "a zip without a top folder is extracted as it is");
+    }
+
+    /// <summary>The download count Launchpad sends fits hit.php's checks (copied from it), or hit.php drops it silently.</summary>
+    private static void Counting()
+    {
+        var target = new System.Text.RegularExpressions.Regex(@"^[a-z0-9.-]{1,100}(:\d{1,5})?(/[A-Za-z0-9._~%/+-]{0,200})?$");
+        var utm = new System.Text.RegularExpressions.Regex(@"^[A-Za-z0-9_.+-]{0,60}(/[A-Za-z0-9_.+-]{0,60}){2}$");
+        var page = new System.Text.RegularExpressions.Regex(@"^/[A-Za-z0-9/_.-]{0,100}$");
+        foreach (var (app, how, url) in new[]
+        {
+            ("filelabs", "install", "https://github.com/limburatorul/file-labs/releases/download/v1.0.53/FileLabs-1.0.53-setup.exe"),
+            ("reel", "trial", "https://github.com/limburatorul/protagonist-downloads/releases/download/reel-trial/Reel-Trial-Setup.exe"),
+            ("reminder", "bought", "https://protagonistlabs.app/reminder/order.php"),
+            ("autoclicker", "update", "https://github.com/limburatorul/auto-clicker/releases/download/v1.1.1/Auto.Clicker.exe"),
+        })
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(Downloads.Body(app, how, url));
+            var r = doc.RootElement;
+            Check(r.GetProperty("t").GetString() == "c" && r.GetProperty("k").GetString() == "download"
+                  && page.IsMatch(r.GetProperty("p").GetString()!) && target.IsMatch(r.GetProperty("x").GetString()!) && utm.IsMatch(r.GetProperty("u").GetString()!),
+                $"the {how} count for {app} passes hit.php's checks");
+        }
     }
 
     /// <summary>

@@ -220,6 +220,38 @@ public static class Feeds
     }
 }
 
+/// <summary>
+/// The site's download count (hit.php, the same anonymous counter its own download buttons use): one event per app
+/// Launchpad downloaded, saying which app, how (installed, updated, trial, bought) and the file. Nothing about the PC:
+/// hit.php keeps a daily hash, never the address. Fire and forget; a count that can't be sent is simply not counted.
+/// </summary>
+public static class Downloads
+{
+    internal static string Endpoint = "https://protagonistlabs.app/hit.php";
+    private static readonly HttpClient Http = Create();
+
+    private static HttpClient Create()
+    {
+        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd($"ProtagonistLabs-Launchpad/{Updater.Current.ToString(2)} (Windows)");
+        return client;
+    }
+
+    /// <summary>The event hit.php expects: a "download" goal on the app's page, the file as its target, and
+    /// launchpad/&lt;how&gt;/&lt;app&gt; in place of the utm tags, which Site Stats reads back.</summary>
+    internal static string Body(string app, string how, string url)
+    {
+        var target = Regex.Replace(url, "^https://", "");
+        return JsonSerializer.Serialize(new { t = "c", p = $"/{app}/", k = "download", x = target.Length > 300 ? target[..300] : target, u = $"launchpad/{how}/{app}" });
+    }
+
+    public static void Count(string app, string how, string url) => _ = Task.Run(async () =>
+    {
+        try { using var _ = await Http.PostAsync(Endpoint, new StringContent(Body(app, how, url), System.Text.Encoding.UTF8, "application/json")); }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { }
+    });
+}
+
 /// <summary>order.php doesn't know this purchase (wrong link or address).</summary>
 public sealed class UnknownPurchase : IOException
 {

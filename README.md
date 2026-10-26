@@ -7,6 +7,8 @@ Every Protagonist Labs app in one window: what's installed, what has a new versi
 - Installs and updates the free apps (one UAC prompt per batch, every file checked against its published SHA-256);
   paid apps update themselves when opened, and start their 14-day trial from here.
 - Starts with Windows in the notification area; its notices are its own, never over a full-screen game.
+- Sends nothing but the feed checks, the downloads, and one anonymous count per app it downloads (to the site's
+  `hit.php`, like the site's own download buttons: which app and how, nothing about the PC).
 
 Build: `installer\build.ps1` → `dist\Launchpad-<version>-setup.exe`. Test: `Launchpad.exe --selftest` (report in
 `%TEMP%\launchpad-selftest.txt`), `Launchpad.exe --shots <folder>` (window and notices as PNGs, drawn off-screen).

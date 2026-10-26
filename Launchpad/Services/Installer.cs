@@ -39,10 +39,13 @@ public static class Installer
             try
             {
                 progress(job.App.Id, "Downloading", 0);
+                // installed or updated, said before the download so a first install isn't counted as an update
+                var how = job.Kind switch { JobKind.Trial => "trial", JobKind.Bought => "bought", _ => Detect.Find(job.App) is null ? "install" : "update" };
                 var report = new Progress<double>(p => progress(job.App.Id, $"Downloading {p * 100:0}%", p));
                 var path = job.Kind == JobKind.Bought && job.Purchase is { Txn: not null } purchase
                     ? await Feeds.FetchBought(job.File, purchase, DownloadFolder, report, token)
                     : await Feeds.Fetch(job.File, DownloadFolder, report, token);
+                Downloads.Count(job.App.Id, how, job.File.Url);
                 ready.Add((job, path));
             }
             catch (UnknownPurchase)

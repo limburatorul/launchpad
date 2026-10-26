@@ -10,7 +10,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>Launchpad</AssemblyName>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Product>Protagonist Labs Launchpad</Product>
     <AssemblyTitle>Protagonist Labs Launchpad</AssemblyTitle>
     <Description>Every Protagonist Labs app in one place: what's installed, what's new, and the rest one click away</Description>

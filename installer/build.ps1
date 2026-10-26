@@ -45,3 +45,5 @@ if ($LASTEXITCODE -ne 0) { throw "installer failed" }
 
 $setup = Join-Path $root "dist\Launchpad-$version-setup.exe"
 Write-Host ("  installer: {0} ({1:N1} MB)" -f $setup, ((Get-Item $setup).Length / 1MB)) -ForegroundColor Green
+# The same file under a name that never changes, for the site's "Get the new Launchpad" button (releases/latest/download/...).
+Copy-Item $setup (Join-Path $root 'dist\Launchpad-Setup.exe') -Force
