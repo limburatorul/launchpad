@@ -124,6 +124,7 @@ public static class Installer
         // ponytail: only an installed copy installs anything; a build run from bin\ has no admin-only folder to stage in
         if (!Paths.Within(AppContext.BaseDirectory, programFiles)) { AppLog.Write("Install refused: Launchpad isn't running from Program Files"); return 1; }
         var staging = Path.Combine(AppContext.BaseDirectory, "staging", Guid.NewGuid().ToString("N"));
+        AppLog.Write($"Install batch: {items.Count} item(s)");
         foreach (var item in items.OfType<JsonObject>())
         {
             var id = Ecosystem.Text(item, "id") ?? "";
@@ -151,7 +152,8 @@ public static class Installer
     {
         if (app.Paid != trial) return new Outcome(false, "Not installed");      // free apps install, paid apps only as their trial
         if (!Paths.IsLocal(file)) return new Outcome(false, "Not installed");
-        var expected = Feeds.Latest(app, fresh: true).GetAwaiter().GetResult()?.File;
+        // on the thread pool: blocking the UI thread on an await that wants to come back to it hung 1.0.0's first real batch
+        var expected = Task.Run(() => Feeds.Latest(app, fresh: true)).GetAwaiter().GetResult()?.File;
         if (expected is null || !Path.GetFileName(file!).Equals(expected.FileName, StringComparison.OrdinalIgnoreCase))
             return new Outcome(false, "Couldn't check the download. Try again later.");
 
