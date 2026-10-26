@@ -92,7 +92,8 @@ public partial class MainWindow : Window
         HeroTitle.Text = updates.Count == 1 ? "1 update ready" : $"{updates.Count} updates ready";
         HeroNotes.Text = string.Join(" · ", updates.Take(3).Select(e =>
             $"{e.App.Name} {e.Available!.Version.ToString(3)}" + (string.IsNullOrWhiteSpace(e.Available.Notes) ? "" : $" — {Short(e.Available.Notes)}")))
-            + (updates.Any(e => e.App.Paid) ? "  ·  Paid apps update themselves when you open them." : "");
+            + (updates.Where(e => !e.UpdatesHere).Select(e => e.App.Name).ToList() is { Count: > 0 } self
+                ? $"  ·  {string.Join(", ", self)} {(self.Count == 1 ? "updates itself when you open it" : "update themselves when you open them")}." : "");
         HeroIcons.Children.Clear();
         var shown = updates.Take(4).ToList();
         for (int i = shown.Count - 1; i >= 0; i--)
@@ -201,6 +202,7 @@ public partial class MainWindow : Window
         if (e.Last is { Ok: false } failed) return (failed.Message, Theme.Bad);
         if (e.Installed is { } i)
         {
+            if (e.TrialEnded) return ("Trial ended", Theme.Warn);
             if (e.HasUpdate) return ($"{i.Version!.ToString(3)} → {e.Available!.Version.ToString(3)}", Theme.AccentText);
             return i.Version is { } v ? ($"✓ {v.ToString(3)}", Theme.Ok) : ("Installed", Theme.Ok);
         }
@@ -210,17 +212,27 @@ public partial class MainWindow : Window
     private Button Action(Entry e)
     {
         Button button;
-        if (e.Installed is not null && e.HasUpdate)
+        if (e.Installed is not null && e.TrialEnded)
+        {
+            button = new Button { Content = "Buy · 20% off", Style = Theme.PrimaryButton };
+            button.Click += (_, _) => Installer.Open(e.App.BuyPage);
+            AutomationProperties.SetName(button, $"Buy {e.App.Name} with 20% off");
+        }
+        else if (e.Installed is not null && e.UpdatesHere)
         {
             button = new Button { Content = "Update", Style = Theme.PrimaryButton };
-            if (e.UpdatesHere) button.Click += async (_, _) => await _hub.Install([e]);
-            else
-            {
-                // a paid app takes its update itself, with its purchase details; opening it starts its own check
-                button.ToolTip = $"Opens {e.App.Name}, which updates itself";
-                button.Click += (_, _) => _hub.Open(e);
-            }
+            button.Click += async (_, _) => await _hub.Install([e]);
             AutomationProperties.SetName(button, $"Update {e.App.Name}");
+        }
+        else if (e.Installed is not null && e.HasUpdate)
+        {
+            // Launchpad can't install this one: Shelf past its Update Pass, or a paid app whose site feed doesn't publish
+            // its bought installer's checksum yet. The app's own updater takes it from here.
+            button = new Button { Content = "Open to update", Style = Theme.PrimaryButton };
+            button.ToolTip = e.App.Id == "shelf" ? "Your Update Pass doesn't cover this version: Shelf shows how to renew it"
+                                                 : $"Opens {e.App.Name}, which offers its update a few seconds after it starts";
+            button.Click += (_, _) => _hub.Open(e);
+            AutomationProperties.SetName(button, $"Open {e.App.Name} to update it");
         }
         else if (e.Installed is not null)
         {

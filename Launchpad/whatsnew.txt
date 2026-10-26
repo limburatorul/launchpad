@@ -4,6 +4,15 @@
 # WhatsNew\<x.y>.jpg (1920 x 340, made from the studio's banner template, the month it came out); the others
 # show their month's picture, WhatsNew\m<MM>.jpg, which must exist for every month listed.
 
+## 1.1 | 2026-10-26 | Your paid apps update from here too
+Launchpad now knows which of your apps you've bought, and installs their updates with the rest.
+**Bought apps, updated in the same go**
+- **Update** on a paid app you own downloads its new version with your purchase and installs it alongside the free ones, still with a single admin prompt. Each download is checked against the checksum published for it.
+- Your apps share your purchase with Launchpad (and Launchpad with them), so you type the link from your purchase email once at most, and never twice.
+- Shelf updates from here while your Update Pass covers the new version; past it, Shelf shows how to renew.
+**Trials**
+- A running trial updates to the newest trial. When a trial has ended, its card says so and offers it with 20% off instead.
+
 ## 1.0 | 2026-10-26 | Every app in one place
 Launchpad shows every Protagonist Labs app on one screen: the ones you have, the ones with something new, and the rest, one click away.
 **What you have, and what's new**

@@ -15,10 +15,31 @@ public sealed class Entry(Product app)
     public Outcome? Last { get; set; }
 
     public bool HasUpdate => Installed?.Version is { } v && Available?.Version is { } a && a > v;
-    /// <summary>Free apps update from here; paid ones update themselves when opened (purchase data and Shelf's Update Pass stay in them).</summary>
-    public bool UpdatesHere => HasUpdate && !App.Paid && Available?.File is not null;
+    public bool TrialEnded => Installed?.Trial == true && Trial is { Left: 0 };
     public bool CanInstall => Installed is null && Available?.File is not null;
     public bool OfferDays => Installed?.Trial == true && Trial is { Left: >= 1 and <= 3 };
+
+    /// <summary>
+    /// How Launchpad would install this app's newest version, or null when it can't (vault Ecosistem.md, contract v4):
+    /// a free app from its release; a running trial from the public trial (an ended one never updates); a bought copy with
+    /// the installer order.php serves for its purchase, checked against latest.json's setupSha256; Shelf, whose installer is
+    /// public, only when the key's Update Pass covers the release, otherwise Shelf itself says how to renew.
+    /// </summary>
+    public (JobKind Kind, Download File)? Route
+    {
+        get
+        {
+            if (Available is not { } a) return null;
+            if (!App.Paid) return a.File is { } f ? (JobKind.Free, f) : null;
+            if (Installed is null || Installed.Trial) return TrialEnded || a.File is null ? null : (JobKind.Trial, a.File);
+            if (App.Id == "shelf")
+                return a.File is { } setup && a.Published is { } published && Purchase.ShelfUntil(Purchase.Read("shelf")?.Licence) is { } until
+                       && published.Date <= until ? (JobKind.Bought, setup) : null;
+            return a.Bought is { } bought ? (JobKind.Bought, bought) : null;
+        }
+    }
+
+    public bool UpdatesHere => HasUpdate && Route is not null;
 }
 
 /// <summary>Everything the window and the tray show, and what they can ask for. Lives on the UI thread.</summary>
@@ -28,6 +49,8 @@ public sealed class Hub
     public event Action? Changed;
     public bool Checking { get; private set; }
     public Action? ShowWindow { get; set; }
+    /// <summary>Asks for a paid app's purchase when none is shared yet (the purchase window); null = cancelled.</summary>
+    public Func<Entry, Bought?>? AskPurchase { get; set; }
     private bool _installing;
 
     public IEnumerable<Entry> Updates => Entries.Where(e => e.HasUpdate);
@@ -70,7 +93,7 @@ public sealed class Hub
 
     public Task UpdateAll() => Install(Updates.Where(e => e.UpdatesHere).ToList());
 
-    /// <summary>Installs or updates free apps and installs paid apps' trials, one UAC prompt for the lot.</summary>
+    /// <summary>Installs or updates the apps, free and paid (trials and bought copies), one UAC prompt for the lot.</summary>
     public async Task Install(IReadOnlyList<Entry> entries)
     {
         if (_installing || entries.Count == 0) return;
@@ -78,10 +101,17 @@ public sealed class Hub
         var jobs = new List<Job>();
         foreach (var e in entries)
         {
-            if (e.Available is not { File: { } file } a) continue;
-            jobs.Add(new Job(e.App, file, a.Version, e.App.Paid));
+            if (e.Route is not { } route) continue;
+            Bought? purchase = null;
+            if (route.Kind == JobKind.Bought && e.App.Id != "shelf")
+            {
+                purchase = Purchase.Read(e.App.Id) ?? AskPurchase?.Invoke(e);
+                if (purchase is null) continue;      // cancelled: this one waits, the rest go ahead
+            }
+            jobs.Add(new Job(e.App, route.File, e.Available!.Version, route.Kind, purchase));
             e.Busy = "Waiting"; e.Progress = null; e.Last = null;
         }
+        if (jobs.Count == 0) { _installing = false; return; }
         Changed?.Invoke();
         try
         {

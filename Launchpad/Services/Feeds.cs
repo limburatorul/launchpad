@@ -9,8 +9,10 @@ namespace Launchpad.Services;
 /// <summary>A file Launchpad can install: where it is, what it must hash to, and how big it is when that's published.</summary>
 public sealed record Download(string Url, string FileName, string Sha256, long? Size);
 
-/// <summary>The newest version of an app, its first lines of notes, and the file that installs it (installer or trial).</summary>
-public sealed record Available(Version Version, string Notes, Download? File);
+/// <summary>The newest version of an app, its first lines of notes, and the files that install it: the public one (a free
+/// app's installer, a paid app's trial; Shelf's single installer) and, for the paid apps sold through order.php, the bought
+/// one (contract v4: latest.json's setupName + setupSha256). Published: the release date, for Shelf's Update Pass.</summary>
+public sealed record Available(Version Version, string Notes, Download? File, Download? Bought = null, DateTime? Published = null);
 
 /// <summary>
 /// Where the versions come from (vault Launchpad.md §3), all of it already published: GitHub's latest release for the free
@@ -63,7 +65,8 @@ public static class Feeds
                 file = new Download(a.GetProperty("browser_download_url").GetString()!, name, digest[7..].ToLowerInvariant(), a.GetProperty("size").GetInt64());
                 break;
             }
-            return new Available(version, FirstLine(root.TryGetProperty("body", out var b) ? b.GetString() : null), file);
+            DateTime? published = root.TryGetProperty("published_at", out var p) && p.ValueKind == JsonValueKind.String && p.TryGetDateTime(out var at) ? at.ToUniversalTime() : null;
+            return new Available(version, FirstLine(root.TryGetProperty("body", out var b) ? b.GetString() : null), file, null, published);
         }
         catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException) { return null; }
     }
@@ -78,7 +81,11 @@ public static class Feeds
             Download? trial = null;
             if (app.TrialFile is { } name && root.TryGetProperty("trialSha256", out var sha) && sha.GetString() is { } hex && Regex.IsMatch(hex, "^[0-9a-fA-F]{64}$"))
                 trial = new Download($"{Downloads}/{app.Id}-trial/{name}", name, hex.ToLowerInvariant(), null);
-            return new Available(version, FirstLine(root.TryGetProperty("notes", out var n) ? n.GetString() : null), trial);
+            Download? bought = null;
+            if (root.TryGetProperty("setupName", out var sn) && sn.GetString() is { } setup && Regex.IsMatch(setup, @"^[\w.-]{5,80}\.(exe|zip)$")
+                && root.TryGetProperty("setupSha256", out var ss) && ss.GetString() is { } setupHex && Regex.IsMatch(setupHex, "^[0-9a-fA-F]{64}$"))
+                bought = new Download($"{Site}/{app.Id}/order.php", setup, setupHex.ToLowerInvariant(), null);
+            return new Available(version, FirstLine(root.TryGetProperty("notes", out var n) ? n.GetString() : null), trial, bought);
         }
         catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException) { return null; }
     }
@@ -160,4 +167,61 @@ public static class Feeds
         if (actual != file.Sha256) { File.Delete(path); throw new IOException("The download doesn't match its published checksum"); }
         return path;
     }
+
+    /// <summary>
+    /// The bought installer from the app's order.php (POST, so the address stays out of the server's log), checked like any
+    /// other download: the file name order.php gives must be the one latest.json published, and its SHA-256 must match.
+    /// Throws <see cref="UnknownPurchase"/> when order.php doesn't know the purchase.
+    /// </summary>
+    public static async Task<string> FetchBought(Download file, Bought purchase, string folder, IProgress<double>? progress, CancellationToken token)
+    {
+        if (!file.Url.StartsWith(Site + "/", StringComparison.Ordinal) || purchase.Txn is null || purchase.Email is null) throw new IOException("Not an order");
+        Directory.CreateDirectory(folder);
+        var path = Path.Combine(folder, Path.GetFileName(file.FileName));
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{file.Url}?txn={Uri.EscapeDataString(purchase.Txn)}&file=setup")
+        {
+            Content = new FormUrlEncodedContent([new KeyValuePair<string, string>("email", purchase.Email)]),
+        };
+        using (var response = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token))
+        {
+            // order.php answers in JSON whenever it isn't handing over the file
+            if (response.Content.Headers.ContentType?.MediaType == "application/json")
+            {
+                var status = "";
+                try { using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(token)); status = doc.RootElement.GetProperty("status").GetString() ?? ""; }
+                catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException) { }
+                if (status is "confirm" or "unknown" or "bad_request") throw new UnknownPurchase();
+                throw new IOException($"order.php: {status}");
+            }
+            response.EnsureSuccessStatusCode();
+            var name = response.Content.Headers.ContentDisposition?.FileName?.Trim('"');
+            if (name != file.FileName) throw new IOException($"order.php sent {name}, expected {file.FileName}");
+            var total = response.Content.Headers.ContentLength ?? 0;
+            using var source = await response.Content.ReadAsStreamAsync(token);
+            using var target = File.Create(path);
+            var buffer = new byte[128 * 1024];
+            long done = 0;
+            int n;
+            while ((n = await source.ReadAsync(buffer, token)) > 0)
+            {
+                await target.WriteAsync(buffer.AsMemory(0, n), token);
+                done += n;
+                progress?.Report(total > 0 ? Math.Min(1, (double)done / total) : 0);
+            }
+            if (total > 0 && done != total) { target.Close(); File.Delete(path); throw new IOException("The download was cut short"); }
+        }
+        string actual = await Task.Run(() =>
+        {
+            using var stream = File.OpenRead(path);
+            return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(stream)).ToLowerInvariant();
+        }, token);
+        if (actual != file.Sha256) { File.Delete(path); throw new IOException("The download doesn't match its published checksum"); }
+        return path;
+    }
+}
+
+/// <summary>order.php doesn't know this purchase (wrong link or address).</summary>
+public sealed class UnknownPurchase : IOException
+{
+    public UnknownPurchase() : base("That purchase wasn't found") { }
 }

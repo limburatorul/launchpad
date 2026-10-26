@@ -9,7 +9,10 @@ using System.Text.Json.Nodes;
 
 namespace Launchpad.Services;
 
-public sealed record Job(Product App, Download File, Version Version, bool Trial);
+public enum JobKind { Free, Trial, Bought }
+
+/// <summary>One app to install: a free app, a paid app's public trial, or a paid app's bought installer (with its purchase).</summary>
+public sealed record Job(Product App, Download File, Version Version, JobKind Kind, Bought? Purchase = null);
 
 public sealed record Outcome(bool Ok, string Message);
 
@@ -36,8 +39,17 @@ public static class Installer
             try
             {
                 progress(job.App.Id, "Downloading", 0);
-                var path = await Feeds.Fetch(job.File, DownloadFolder, new Progress<double>(p => progress(job.App.Id, $"Downloading {p * 100:0}%", p)), token);
+                var report = new Progress<double>(p => progress(job.App.Id, $"Downloading {p * 100:0}%", p));
+                var path = job.Kind == JobKind.Bought && job.Purchase is { Txn: not null } purchase
+                    ? await Feeds.FetchBought(job.File, purchase, DownloadFolder, report, token)
+                    : await Feeds.Fetch(job.File, DownloadFolder, report, token);
                 ready.Add((job, path));
+            }
+            catch (UnknownPurchase)
+            {
+                // as the apps do: a purchase order.php doesn't know is forgotten, and asked for again next time
+                Purchase.Forget(job.App.Id);
+                outcomes[job.App.Id] = new Outcome(false, "Purchase not found. Check the link and address.");
             }
             catch (Exception ex) when (ex is IOException or System.Net.Http.HttpRequestException or TaskCanceledException or UnauthorizedAccessException)
             {
@@ -86,7 +98,7 @@ public static class Installer
     {
         var batch = Path.Combine(DownloadFolder, $"batch-{Guid.NewGuid():N}.json");
         var items = new JsonArray();
-        foreach (var (job, path) in ready) items.Add(new JsonObject { ["id"] = job.App.Id, ["file"] = path, ["trial"] = job.Trial });
+        foreach (var (job, path) in ready) items.Add(new JsonObject { ["id"] = job.App.Id, ["file"] = path, ["kind"] = job.Kind.ToString() });
         Ecosystem.WriteJson(batch, new JsonObject { ["items"] = items });
         var result = batch + ".result.json";
         try
@@ -130,10 +142,10 @@ public static class Installer
             var id = Ecosystem.Text(item, "id") ?? "";
             var app = Catalog.Find(id);
             if (app is null) continue;
-            bool trial = item["trial"] is JsonValue t && t.TryGetValue(out bool tr) && tr;
+            if (!Enum.TryParse(Ecosystem.Text(item, "kind"), out JobKind kind)) continue;
             try
             {
-                results[id] = Result(InstallOne(app, Ecosystem.Text(item, "file"), trial, staging));
+                results[id] = Result(InstallOne(app, Ecosystem.Text(item, "file"), kind, staging));
             }
             catch (Exception ex)
             {
@@ -148,12 +160,14 @@ public static class Installer
 
     private static JsonObject Result(Outcome o) => new() { ["ok"] = o.Ok, ["message"] = o.Message };
 
-    private static Outcome InstallOne(Product app, string? file, bool trial, string staging)
+    private static Outcome InstallOne(Product app, string? file, JobKind kind, string staging)
     {
-        if (app.Paid != trial) return new Outcome(false, "Not installed");      // free apps install, paid apps only as their trial
+        if (app.Paid == (kind == JobKind.Free)) return new Outcome(false, "Not installed");      // free apps as Free, paid apps as Trial or Bought
         if (!Paths.IsLocal(file)) return new Outcome(false, "Not installed");
         // on the thread pool: blocking the UI thread on an await that wants to come back to it hung 1.0.0's first real batch
-        var expected = Task.Run(() => Feeds.Latest(app, fresh: true)).GetAwaiter().GetResult()?.File;
+        var latest = Task.Run(() => Feeds.Latest(app, fresh: true)).GetAwaiter().GetResult();
+        // the bought installer's checksum comes from latest.json; Shelf has one public installer for every copy
+        var expected = kind == JobKind.Bought && app.Repo is null ? latest?.Bought : latest?.File;
         if (expected is null || !Path.GetFileName(file!).Equals(expected.FileName, StringComparison.OrdinalIgnoreCase))
             return new Outcome(false, "Couldn't check the download. Try again later.");
 
@@ -218,19 +232,21 @@ public static class Installer
         File.Copy(source, target);
     }
 
-    /// <summary>Extracts a release zip whose files sit in one top folder ("Planner/..."), without that folder, over what's
-    /// there. Files not in the zip (the user's plan.json) are left alone; an entry leading outside the folder is refused.</summary>
+    /// <summary>Extracts a release zip, without its one top folder ("Planner/...") when it has one, over what's there.
+    /// Files not in the zip (the user's plan.json) are left alone; an entry leading outside the folder is refused.</summary>
     internal static void Unzip(string zip, string folder)
     {
         Directory.CreateDirectory(folder);
         var root = Path.GetFullPath(folder) + Path.DirectorySeparatorChar;
         using var archive = ZipFile.OpenRead(zip);
+        var names = archive.Entries.Select(e => e.FullName.Replace('\\', '/')).Where(n => !n.EndsWith('/')).ToList();
+        var top = names.Count > 0 && names.All(n => n.Contains('/')) && names.Select(n => n[..n.IndexOf('/')]).Distinct().Count() == 1
+            ? names[0][..(names[0].IndexOf('/') + 1)] : "";
         foreach (var entry in archive.Entries)
         {
             var name = entry.FullName.Replace('\\', '/');
-            int slash = name.IndexOf('/');
-            if (slash < 0 || name.EndsWith('/')) continue;
-            var target = Path.GetFullPath(Path.Combine(folder, name[(slash + 1)..]));
+            if (name.EndsWith('/')) continue;
+            var target = Path.GetFullPath(Path.Combine(folder, name[top.Length..]));
             if (!target.StartsWith(root, StringComparison.OrdinalIgnoreCase)) throw new IOException($"Unsafe path in the zip: {entry.FullName}");
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             if (File.Exists(target))

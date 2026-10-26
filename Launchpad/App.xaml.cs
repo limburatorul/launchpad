@@ -30,7 +30,7 @@ public partial class App : Application
         TaskScheduler.UnobservedTaskException += (_, args) => AppLog.Write($"Error in background work: {args.Exception}");
         base.OnStartup(e);
 
-        _hub = new Hub { ShowWindow = ShowWindow };
+        _hub = new Hub { ShowWindow = ShowWindow, AskPurchase = e => PurchaseWindow.Ask(e.App, _window) };
         _tray = new Tray(_hub, ShowWindow, Quit);
         _hub.Scan();
         if (!e.Args.Contains("--tray")) ShowWindow();

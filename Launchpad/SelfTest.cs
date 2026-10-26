@@ -32,6 +32,7 @@ public static class SelfTest
             Trials(temp);
             Notices(temp);
             Staging(temp);
+            Registration(temp);
         }
         catch (Exception ex) { Check(false, $"crashed: {ex}"); }
         finally
@@ -244,6 +245,63 @@ public static class SelfTest
         Check(File.ReadAllBytes(target).Length == 5, "a portable exe is replaced");
     }
 
+    /// <summary>Contract v4: the shared purchase, the bought installer from latest.json, and which route each copy takes.</summary>
+    private static void Registration(string temp)
+    {
+        var saved = Ecosystem.Folder;
+        Ecosystem.Folder = Path.Combine(temp, "eco4");
+        try
+        {
+            var data = Path.Combine(Ecosystem.Folder, "data");
+            Directory.CreateDirectory(data);
+            const string txn = "txn_01abcdefghijklmnopqrstuvwx";
+            Purchase.Write("reel", txn, "buyer@example.com");
+            Check(Purchase.Read("reel") is { Txn: txn, Email: "buyer@example.com" }, "a purchase written is read back");
+            File.WriteAllText(Path.Combine(data, "stash.purchase.json"), """{"schema":1,"txn":"txn_short","email":"a@b"}""");
+            File.WriteAllText(Path.Combine(data, "frostpane.purchase.json"), $$"""{"schema":1,"txn":"{{txn}}","email":"no at sign"}""");
+            File.WriteAllText(Path.Combine(data, "planner.purchase.json"), new string(' ', 5000));
+            Check(Purchase.Read("stash") is null && Purchase.Read("frostpane") is null && Purchase.Read("planner") is null && Purchase.Read("reminder") is null,
+                "a bad txn, a bad address, an oversized file, no file: all 'no purchase'");
+            Purchase.Forget("reel");
+            Check(Purchase.Read("reel") is null, "a purchase order.php didn't know is forgotten");
+            Check(Purchase.TxnFrom($"https://protagonistlabs.app/reel/thanks/?txn={txn}&x=1") == txn && Purchase.TxnFrom("nothing here") is null, "the order id is found inside the emailed link");
+
+            static string Key(string until) =>
+                "SHELF1." + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($$"""{"name":"A","until":"{{until}}"}""")).TrimEnd('=').Replace('+', '-').Replace('/', '_') + ".sig";
+            Check(Purchase.ShelfUntil(Key("2027-03-01")) == new DateTime(2027, 3, 1) && Purchase.ShelfUntil("SHELF1.garbage.sig") is null && Purchase.ShelfUntil("nope") is null,
+                "Shelf's Update Pass date read from the key");
+
+            var reel = Catalog.Find("reel")!;
+            string hex = new('a', 64);
+            var feed = Feeds.FromSite($$"""{"version":"1.15.0","trialSha256":"{{hex}}","setupSha256":"{{hex.ToUpperInvariant()}}","setupName":"Reel.Setup.1.15.0.exe"}""", reel);
+            Check(feed?.Bought is { FileName: "Reel.Setup.1.15.0.exe", Url: "https://protagonistlabs.app/reel/order.php" } b && b.Sha256 == hex, "latest.json's bought installer: name, checksum, order.php");
+            Check(Feeds.FromSite($$"""{"version":"1.15.0","setupSha256":"{{hex}}","setupName":"..\\evil.exe"}""", reel)?.Bought is null, "a setupName that isn't a plain file name is refused");
+
+            Entry E(string id, bool trial, (long, int)? clock, Available a) =>
+                new(Catalog.Find(id)!) { Installed = new Installed(@"C:\x\a.exe", new Version(1, 0, 0), trial), Trial = clock, Available = a };
+            var both = new Available(new Version(2, 0, 0), "", new Download("https://github.com/t", "T.exe", hex, null), new Download("https://protagonistlabs.app/reel/order.php", "Reel.Setup.2.0.0.exe", hex, null));
+            Check(E("reel", false, null, both).Route?.Kind == JobKind.Bought, "a bought copy updates with the bought installer");
+            Check(E("reel", true, (1, 5), both).Route?.Kind == JobKind.Trial, "a running trial updates with the trial");
+            Check(E("reel", true, (1, 0), both) is { Route: null, TrialEnded: true, UpdatesHere: false }, "an ended trial doesn't update");
+            Check(E("reel", false, null, both with { Bought = null }).Route is null, "no published bought checksum yet: the app updates itself");
+            Check(E("filelabs", false, null, both).Route?.Kind == JobKind.Free, "a free app installs its release");
+
+            var shelf = new Available(new Version(4, 6, 0), "", new Download("https://github.com/s", "Shelf-Trial-Setup.exe", hex, 1), null, new DateTime(2026, 10, 26));
+            Check(E("shelf", false, null, shelf).Route is null, "Shelf without a shared key: Shelf decides");
+            File.WriteAllText(Path.Combine(data, "shelf.purchase.json"), $$"""{"schema":1,"licence":"{{Key("2027-01-01")}}"}""");
+            Check(E("shelf", false, null, shelf).Route?.Kind == JobKind.Bought, "Shelf with an Update Pass that covers the release: installed from here");
+            File.WriteAllText(Path.Combine(data, "shelf.purchase.json"), $$"""{"schema":1,"licence":"{{Key("2026-09-01")}}"}""");
+            Check(E("shelf", false, null, shelf).Route is null, "Shelf past its Update Pass: opened, so it can say how to renew");
+        }
+        finally { Ecosystem.Folder = saved; }
+
+        var zip = Path.Combine(temp, "flat.zip");
+        using (var archive = ZipFile.Open(zip, ZipArchiveMode.Create))
+            using (var w = new StreamWriter(archive.CreateEntry("Planner.exe").Open())) w.Write("flat");
+        Installer.Unzip(zip, Path.Combine(temp, "Flat"));
+        Check(File.ReadAllText(Path.Combine(temp, "Flat", "Planner.exe")) == "flat", "a zip without a top folder is extracted as it is");
+    }
+
     /// <summary>
     /// Launchpad.exe --shots &lt;folder&gt;: the window with this PC's real apps and feeds, and the two kinds of notice, drawn
     /// off-screen into PNGs, so the look can be checked without a window over the user's desktop. Reads only.
@@ -262,6 +320,7 @@ public static class SelfTest
             reel.TrialOffer!.Value.Price, reel.TrialOffer.Value.Offer, "Buy now — 20% off", () => { }, null, "x", () => true)), Path.Combine(folder, "notice-trial.png"));
         Save(Notice.Preview(new NoticeContent([Theme.Icon("filelabs"), Theme.Icon("spacescan"), Theme.Icon("lume")], "3 updates ready", "File Labs, SpaceScan, Lume",
             null, null, "Update all", () => { }, () => { }, "y", () => true)), Path.Combine(folder, "notice-updates.png"));
+        Save(PurchaseWindow.Preview(Catalog.Find("reminder")!), Path.Combine(folder, "purchase.png"));
     }
 
     private static void Save(FrameworkElement? element, string path)
