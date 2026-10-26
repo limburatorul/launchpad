@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Launchpad mockup</title>
+<style>
+:root{--bg:#121318;--panel:#191b22;--card:#20232c;--line:#2c303b;--text:#eceef4;--dim:#9aa0ae;--mute:#6b7180;--acc1:#ff2bd6;--acc2:#7b5cff;--ok:#3ddc97}
+*{box-sizing:border-box}body{margin:0;background:#0b0c10;font-family:"Segoe UI Variable","Segoe UI",sans-serif;color:var(--text);display:flex;justify-content:center;padding:28px}
+.win{width:1180px;height:900px;background:var(--bg);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:grid;grid-template-rows:38px 1fr}
+.tb{display:flex;align-items:center;gap:10px;padding:0 0 0 14px;font-size:12.5px;color:var(--dim);border-bottom:1px solid var(--line)}
+.tb .ctl{margin-left:auto;display:flex}.tb .ctl span{width:46px;height:38px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.logo{width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,var(--acc1),var(--acc2));display:flex;align-items:center;justify-content:center}
+.body{display:grid;grid-template-columns:210px 1fr;min-height:0}
+.side{background:var(--panel);border-right:1px solid var(--line);padding:18px 12px;display:flex;flex-direction:column;gap:2px}
+.nav{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:7px;font-size:13.5px;color:var(--dim)}
+.nav.on{background:#262a35;color:var(--text)}.nav .n{margin-left:auto;font-size:12px;color:var(--mute)}
+.nav .b{margin-left:auto;font-size:11px;font-weight:600;color:#fff;background:linear-gradient(135deg,var(--acc1),var(--acc2));border-radius:10px;padding:1px 8px}
+.side .foot{margin-top:auto;font-size:12px;color:var(--mute);padding:0 12px;line-height:1.9}
+.tog{display:inline-block;width:28px;height:15px;border-radius:8px;background:var(--acc2);vertical-align:-3px;margin-right:6px;position:relative}.tog:after{content:"";position:absolute;right:2px;top:2px;width:11px;height:11px;border-radius:50%;background:#fff}
+.main{overflow:hidden;padding:22px 26px}
+.hero{position:relative;border-radius:14px;padding:22px 24px;display:flex;align-items:center;gap:22px;background:linear-gradient(120deg,#3a1450 0%,#24184d 45%,#151a2e 100%);border:1px solid #3b2a60;overflow:hidden}
+.hero:before{content:"";position:absolute;right:-60px;top:-80px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,#ff2bd633,transparent 70%)}
+.stack{display:flex}.stack img{width:62px;height:62px;border-radius:15px;border:3px solid #24184d;margin-right:-14px}
+.hero h1{margin:0;font-size:22px;font-weight:600}.hero p{margin:4px 0 0;font-size:13px;color:#c9c3e0}
+.btn{border:0;border-radius:8px;padding:9px 18px;font:600 13px "Segoe UI",sans-serif;color:#fff;background:linear-gradient(135deg,var(--acc1),var(--acc2));cursor:pointer}
+.ghost{border:1px solid var(--line);background:#262a35;color:var(--text);font-weight:500}
+.hero .btn{margin-left:auto;padding:11px 22px;font-size:14px;position:relative}
+h2{font-size:13px;font-weight:600;color:var(--dim);margin:22px 0 10px;display:flex;align-items:center;gap:8px}h2 small{font-weight:400;color:var(--mute)}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 10px 12px;text-align:center;position:relative}
+.card img{width:60px;height:60px;border-radius:14px;display:block;margin:0 auto 9px}
+.card .nm{font-size:13.5px;font-weight:600}.card .vr{font-size:11.5px;color:var(--mute);margin:2px 0 10px;min-height:15px}
+.card .btn{width:100%;padding:6px 0;font-size:12px}
+.upd{border-color:#7b5cff;background:linear-gradient(180deg,#2a2342,var(--card) 70%)}
+.upd .vr{color:#c9b8ff}
+.dot{position:absolute;top:9px;right:9px;width:9px;height:9px;border-radius:50%;background:var(--acc1);box-shadow:0 0 0 3px #ff2bd633}
+.ok{color:var(--ok)!important}
+.bar{height:6px;border-radius:3px;background:#2f3342;overflow:hidden;margin-top:3px}.bar i{display:block;height:100%;width:62%;background:linear-gradient(90deg,var(--acc1),var(--acc2))}
+.pill{position:absolute;top:8px;left:8px;font-size:10px;font-weight:600;padding:1px 7px;border-radius:8px;background:#3d2e10;color:#ffc35c}
+.off img{filter:grayscale(.85) brightness(.75)}.off .nm{color:var(--dim)}
+.tag{font-size:10.5px;color:var(--mute)}
+</style></head><body>
+<div class="win">
+ <div class="tb"><span class="logo"><svg width="11" height="11" viewBox="0 0 24 24" fill="#fff"><path d="M12 2c3 2 5 6 5 10l2 3-3 1-1 3h-6l-1-3-3-1 2-3c0-4 2-8 5-10zm0 6a2 2 0 100 4 2 2 0 000-4z"/></svg></span>Protagonist Labs Launchpad<div class="ctl"><span>&#x2014;</span><span>&#x25A1;</span><span>&#x2715;</span></div></div>
+ <div class="body">
+  <div class="side">
+   <div class="nav on">All apps<span class="n">17</span></div>
+   <div class="nav">Updates<span class="b">2</span></div>
+   <div class="nav">Installed<span class="n">7</span></div>
+   <div class="nav">Not installed<span class="n">10</span></div>
+   <div class="foot"><span class="tog"></span>Start with Windows<br>Checked 2 minutes ago<br><a style="color:#b9a6ff;text-decoration:none">Check now</a> · Settings</div>
+  </div>
+  <div class="main">
+   <div class="hero">
+    <div class="stack"><img src="../../Game Browser/site/hub/icons/filelabs.png"><img src="../../Game Browser/site/hub/icons/spacescan.png"></div>
+    <div style="margin-left:14px;position:relative"><h1>2 updates ready</h1><p>File Labs 1.0.53 — smooth zoom in the icon view · SpaceScan 1.4.2 — Open in File Labs from an admin window</p></div>
+    <button class="btn">Update all</button>
+   </div>
+
+   <h2>Installed <small>7</small></h2>
+   <div class="grid">
+    <div class="card upd"><span class="dot"></span><img src="../../Game Browser/site/hub/icons/filelabs.png"><div class="nm">File Labs</div><div class="vr">1.0.52 → 1.0.53</div><button class="btn">Update</button></div>
+    <div class="card upd"><span class="dot"></span><img src="../../Game Browser/site/hub/icons/spacescan.png"><div class="nm">SpaceScan</div><div class="vr">Downloading 62%</div><div class="bar"><i></i></div></div>
+    <div class="card"><img src="../../Game Browser/site/hub/icons/shelf.png"><div class="nm">Shelf</div><div class="vr ok">✓ 4.5.5</div><button class="btn ghost">Open</button></div>
+    <div class="card"><span class="pill">Trial · 9 days</span><img src="../../Game Browser/site/hub/icons/reel.png"><div class="nm">Reel</div><div class="vr ok">✓ 1.14.1</div><button class="btn ghost">Open</button></div>
+    <div class="card"><img src="../../Game Browser/site/hub/icons/backuplabs.png"><div class="nm">Backup Labs</div><div class="vr ok">✓ 1.6.2</div><button class="btn ghost">Open</button></div>
+    <div class="card"><img src="../../Game Browser/site/hub/icons/sysoptimizer.png"><div class="nm">Sysoptimizer</div><div class="vr ok">✓ 1.21.2</div><button class="btn ghost">Open</button></div>
+    <div class="card"><img src="../../Game Browser/site/hub/icons/lume.png"><div class="nm">Lume</div><div class="vr ok">✓ 0.5.2</div><button class="btn ghost">Open</button></div>
+   </div>
+
+   <h2>Get more <small>10 · free apps install in one click, paid apps start a 14-day trial</small></h2>
+   <div class="grid">
+    <div class="card off"><img src="../../Game Browser/site/hub/icons/stash.png"><div class="nm">Stash</div><div class="vr tag">Paid · trial</div><button class="btn ghost">Try free</button></div>
+    <div class="card off"><img src="../../Game Browser/site/hub/icons/frostpane.png"><div class="nm">Frostpane</div><div class="vr tag">Paid · trial</div><button class="btn ghost">Try free</button></div>
+    <div class="card off"><img src="../../Game Browser/site/hub/icons/planner.png"><div class="nm">Planner</div><div class="vr tag">Paid · trial</div><button class="btn ghost">Try free</button></div>
+    <div class="card off"><img src="../../Game Browser/site/hub/icons/reminder.png"><div class="nm">Reminder</div><div class="vr tag">Paid · trial</div><button class="btn ghost">Try free</button></div>
+    <div class="card off"><img src="../../Game Browser/site/hub/icons/glaze.png"><div class="nm">Glaze</div><div class="vr tag">Free</div><button class="btn ghost">Install</button></div>
+    <div class="card off"><img src="../../Game Browser/site/hub/icons/steamradar.png"><div class="nm">SteamRadar</div><div class="vr tag">Free</div><button class="btn ghost">Install</button></div>
+    <div class="card off"><img src="../../Game Browser/site/hub/icons/uproot.png"><div class="nm">Uproot</div><div class="vr tag">Free</div><button class="btn ghost">Install</button></div>
+    <div class="card off"><img src="../../Game Browser/site/hub/icons/hotkeyscan.png"><div class="nm">HotkeyScan</div><div class="vr tag">Free</div><button class="btn ghost">Install</button></div>
+    <div class="card off"><img src="../../Game Browser/site/hub/icons/autoclicker.png"><div class="nm">Auto Clicker</div><div class="vr tag">Free</div><button class="btn ghost">Install</button></div>
+    <div class="card off"><img src="../../Game Browser/site/hub/icons/cursorselector.png"><div class="nm">Cursor Selector</div><div class="vr tag">Free</div><button class="btn ghost">Install</button></div>
+   </div>
+  </div>
+ </div>
+</div>
+</body></html>

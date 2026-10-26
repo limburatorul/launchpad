@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <!-- only for the tray icon (NotifyIcon); its namespaces are kept out of the global usings below -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>Launchpad</AssemblyName>
+    <Version>1.0.0</Version>
+    <Product>Protagonist Labs Launchpad</Product>
+    <AssemblyTitle>Protagonist Labs Launchpad</AssemblyTitle>
+    <Description>Every Protagonist Labs app in one place: what's installed, what's new, and the rest one click away</Description>
+    <Company>Protagonist Labs</Company>
+    <Authors>Protagonist Labs</Authors>
+    <Copyright>Copyright (c) 2026 Protagonist Labs. MIT licence</Copyright>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="app.ico" />
+    <Resource Include="Icons\*.png" />
+    <EmbeddedResource Include="whatsnew.txt" LogicalName="Launchpad.whatsnew.txt" />
+    <EmbeddedResource Include="WhatsNew\*.jpg" LogicalName="Launchpad.WhatsNew.%(Filename).jpg" />
+  </ItemGroup>
+
+</Project>

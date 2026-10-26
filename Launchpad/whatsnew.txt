@@ -1,0 +1,18 @@
+# Every release's notes, newest first, shown by What's new (WhatsNewWindow.cs). Built into the exe.
+# "## version | date | title", one entry per x.y with its patches; then the notes: "- " a point,
+# a line in ** ** a heading, anything else a paragraph. A release with a picture of its own has
+# WhatsNew\<x.y>.jpg (1920 x 340, made from the studio's banner template, the month it came out); the others
+# show their month's picture, WhatsNew\m<MM>.jpg, which must exist for every month listed.
+
+## 1.0 | 2026-10-26 | Every app in one place
+Launchpad shows every Protagonist Labs app on one screen: the ones you have, the ones with something new, and the rest, one click away.
+**What you have, and what's new**
+- Your apps with their real icons and the version you're on. When a new version is out, the card says so and a banner at the top sums it up.
+- **Update all** installs the free apps' new versions in one go, with a single admin prompt for the lot. Every download is checked against the checksum published with it before it runs.
+- Paid apps keep updating themselves, with your purchase: their **Update** button opens them and they take it from there.
+**The rest, one click away**
+- Free apps install with **Install**. Paid apps start their 14-day trial with **Try free**.
+- A trial shows how many days are left on its card. Three days before it ends, and again on its last day, Launchpad lets you know, with the 20% off that comes with every trial.
+**Quietly in the corner**
+- Launchpad starts with Windows in the notification area and looks for new versions every 6 hours. Its notices are its own, in its colours, and wait while you're playing full screen.
+- Every app still updates itself on its own too: Launchpad only brings them together.
