@@ -63,7 +63,7 @@ public static class Catalog
         new("uproot", "Uproot", "Uninstall apps with what they leave", false, "Uproot.exe", Kind.Inno, "limburatorul/uproot", Ends("-setup.exe"), "{5B7C1E92-4D3A-4F86-9C21-8E0A7D6B3F14}_is1"),
         new("glaze", "Glaze", "YouTube without the clutter", false, "Glaze.exe", Kind.Inno, "limburatorul/glaze", n => n.StartsWith("Glaze-Setup-", StringComparison.OrdinalIgnoreCase) && n.EndsWith(".exe", StringComparison.OrdinalIgnoreCase), "{93E393FD-2A35-4E0F-9CEE-B98EC1665065}_is1"),
         new("lume", "Lume", "Find and open anything with Alt+Space", false, "Lume.exe", Kind.Nsis, "limburatorul/lume", Ends("-x64.exe"), "c99ac480-c993-55fb-b9e0-27333504c63e"),
-        new("steamradar", "SteamRadar", "Steam deals on the games you watch", false, "SteamRadar.exe", Kind.Nsis, "limburatorul/steamradar", Ends("-setup.exe"), null),
+        new("steamradar", "SteamRadar", "Steam deals on the games you watch", false, "SteamRadar.exe", Kind.Nsis, "limburatorul/steamradar", Ends("-setup.exe"), "4bff0240-0503-5ee6-87c6-ca6b87339717"),
         new("hotkeyscan", "HotkeyScan", "Finds which app holds a shortcut", false, "HotkeyScan.exe", Kind.Portable, "limburatorul/hotkeyscan", Is("HotkeyScan.exe"), null),
         new("autoclicker", "Auto Clicker", "Clicks and keys on repeat", false, "Auto Clicker.exe", Kind.Portable, "limburatorul/auto-clicker", Is("Auto.Clicker.exe"), null),
         new("cursorselector", "Cursor Selector", "Change your mouse cursors in one click", false, "CursorSelector.exe", Kind.Portable, "limburatorul/cursor-selector", Is("CursorSelector.exe"), null),
