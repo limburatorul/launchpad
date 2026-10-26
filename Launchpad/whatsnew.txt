@@ -8,6 +8,7 @@
 - When Launchpad downloads an app, it tells the site which one and how (installed, updated, trial or bought), so we can see how many people get our apps through Launchpad. It's the same anonymous count the site keeps for its own download buttons: no account, no address, nothing about your PC.
 - **1.2.1:** the pictures at the top of these notes for 1.1 and 1.2 were blank; now they show.
 - **1.2.2:** **Try free** and **Install** work from the first second: right after Launchpad started, an app you don't have showed "See page" until the first check came back; now Launchpad remembers the last answers, and if it knows nothing yet, the button checks first and then installs. The icon does the same as the button, and the app's web page is the small **About** link.
+- **1.2.3:** while one app downloads, the rest of the window works: **Update** on another app puts it next in line (its card says *Waiting*) instead of doing nothing, and every other button answers as usual.
 
 ## 1.1 | 2026-10-26 | Your paid apps update from here too
 Launchpad now knows which of your apps you've bought, and installs their updates with the rest.

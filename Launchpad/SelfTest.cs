@@ -1,6 +1,7 @@
 using System.IO;
 using System.IO.Compression;
 using System.Security.Cryptography;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -295,6 +296,12 @@ public static class SelfTest
             Check(E("reel", true, (1, 0), both) is { Route: null, TrialEnded: true, UpdatesHere: false }, "an ended trial doesn't update");
             Check(E("reel", false, null, both with { Bought = null }).Route is null, "no published bought checksum yet: the app updates itself");
             Check(E("filelabs", false, null, both).Route?.Kind == JobKind.Free, "a free app installs its release");
+
+            var hub = new Hub();
+            typeof(Hub).GetField("_installing", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(hub, true);
+            var waiting = E("filelabs", false, null, both);
+            hub.Install([waiting]).Wait();
+            Check(waiting.Busy == "Waiting", "an update asked for while another runs waits its turn instead of being ignored");
 
             var shelf = new Available(new Version(4, 6, 0), "", new Download("https://github.com/s", "Shelf-Trial-Setup.exe", hex, 1), null, new DateTime(2026, 10, 26));
             Check(E("shelf", false, null, shelf).Route is null, "Shelf without a shared key: Shelf decides");

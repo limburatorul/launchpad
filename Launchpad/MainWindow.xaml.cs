@@ -19,6 +19,7 @@ public partial class MainWindow : Window
 {
     private readonly Hub _hub;
     private readonly DispatcherTimer _clock = new() { Interval = TimeSpan.FromMinutes(1) };
+    private readonly Dictionary<string, (TextBlock Status, Border Fill)> _bars = [];
 
     public MainWindow(Hub hub, App app)
     {
@@ -32,6 +33,7 @@ public partial class MainWindow : Window
         foreach (var filter in new[] { ShowAll, ShowUpdates, ShowInstalled, ShowMissing }) filter.Checked += (_, _) => Render();
         HeroButton.Click += async (_, _) => await _hub.UpdateAll();
         _hub.Changed += Render;
+        _hub.Progressed += e => { if (_bars.TryGetValue(e.App.Id, out var bar)) Draw(e, bar.Status, bar.Fill); else Render(); };
         _clock.Tick += (_, _) => RenderChecked();
         _clock.Start();
         Closing += (_, e) => { e.Cancel = true; Hide(); };      // the tray keeps Launchpad; Quit is in its menu
@@ -71,6 +73,7 @@ public partial class MainWindow : Window
         RenderHero(updates);
 
         Sections.Children.Clear();
+        _bars.Clear();
         if (ShowUpdates.IsChecked == true)
         {
             if (updates.Count == 0) Sections.Children.Add(Empty("Everything is up to date", "Launchpad looks for new versions every 6 hours, and tells you when one is out."));
@@ -106,7 +109,7 @@ public partial class MainWindow : Window
         int here = updates.Count(e => e.UpdatesHere);
         HeroButton.Visibility = here > 0 ? Visibility.Visible : Visibility.Collapsed;
         HeroButton.Content = here == updates.Count ? "Update all" : $"Update {here} {(here == 1 ? "app" : "apps")}";
-        HeroButton.IsEnabled = !updates.Any(e => e.Busy is not null);
+        HeroButton.IsEnabled = updates.Any(e => e.UpdatesHere && e.Busy is null);
     }
 
     private static string Short(string text) => text.Length <= 60 ? text : text[..57].TrimEnd(' ', ',', '.', ':') + "…";
@@ -155,15 +158,16 @@ public partial class MainWindow : Window
         });
 
         var (status, brush) = Status(e);
-        stack.Children.Add(new TextBlock { Text = status, Foreground = brush, FontSize = 11.5, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 2, 0, 10), TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = status });
+        var statusText = new TextBlock { Text = status, Foreground = brush, FontSize = 11.5, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 2, 0, 10), TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = status };
+        stack.Children.Add(statusText);
 
         if (e.Busy is not null)
         {
             var track = new Grid { Height = 6, Margin = new Thickness(0, 4, 0, 10) };
             track.Children.Add(new Border { CornerRadius = new CornerRadius(3), Background = new SolidColorBrush(Color.FromRgb(0x2f, 0x33, 0x42)) });
             var fill = new Border { CornerRadius = new CornerRadius(3), Background = Theme.Accent, HorizontalAlignment = HorizontalAlignment.Left };
-            fill.Width = e.Progress is { } p ? Math.Max(6, 114 * p) : 114;
-            if (e.Progress is null) fill.Opacity = 0.55;
+            Draw(e, statusText, fill);
+            _bars[e.App.Id] = (statusText, fill);
             track.Children.Add(fill);
             stack.Children.Add(track);
         }
@@ -207,6 +211,13 @@ public partial class MainWindow : Window
         card.Child = layer;
         AutomationProperties.SetName(card, $"{e.App.Name}, {status}");
         return card;
+    }
+
+    private static void Draw(Entry e, TextBlock status, Border fill)
+    {
+        status.Text = e.Busy; status.ToolTip = e.Busy;
+        fill.Width = e.Progress is { } p ? Math.Max(6, 114 * p) : 114;
+        fill.Opacity = e.Progress is null ? 0.55 : 1;
     }
 
     private static (string, Brush) Status(Entry e)

@@ -47,11 +47,16 @@ public sealed class Hub
 {
     public List<Entry> Entries { get; } = Catalog.All.Select(a => new Entry(a)).ToList();
     public event Action? Changed;
+    /// <summary>Only this entry's progress moved: the window updates its bar in place instead of building every card again
+    /// (a rebuild per downloaded chunk swallowed clicks on the other cards).</summary>
+    public event Action<Entry>? Progressed;
     public bool Checking { get; private set; }
     public Action? ShowWindow { get; set; }
     /// <summary>Asks for a paid app's purchase when none is shared yet (the purchase window); null = cancelled.</summary>
     public Func<Entry, Bought?>? AskPurchase { get; set; }
     private bool _installing;
+    /// <summary>Apps asked for while a batch runs: they go next, as their own batch, instead of being ignored.</summary>
+    private readonly List<Entry> _queued = [];
 
     public IEnumerable<Entry> Updates => Entries.Where(e => e.HasUpdate);
     public IEnumerable<Entry> InstalledApps => Entries.Where(e => e.Installed is not null);
@@ -97,7 +102,17 @@ public sealed class Hub
     /// <summary>Installs or updates the apps, free and paid (trials and bought copies), one UAC prompt for the lot.</summary>
     public async Task Install(IReadOnlyList<Entry> entries)
     {
-        if (_installing || entries.Count == 0) return;
+        if (entries.Count == 0) return;
+        if (_installing)
+        {
+            foreach (var e in entries.Where(e => e.Busy is null && e.Route is not null))
+            {
+                _queued.Add(e);
+                e.Busy = "Waiting"; e.Progress = null; e.Last = null;
+            }
+            Changed?.Invoke();
+            return;
+        }
         _installing = true;
         var jobs = new List<Job>();
         foreach (var e in entries)
@@ -119,8 +134,9 @@ public sealed class Hub
             var outcomes = await Installer.Run(jobs, (id, status, progress) =>
             {
                 var e = Entries.First(x => x.App.Id == id);
+                if (e.Busy == status) return;       // the same whole percent: nothing to draw
                 e.Busy = status; e.Progress = progress;
-                Changed?.Invoke();
+                Progressed?.Invoke(e);
             }, CancellationToken.None);
             foreach (var e in entries)
             {
@@ -132,6 +148,13 @@ public sealed class Hub
         {
             _installing = false;
             Scan();
+            if (_queued.Count > 0)
+            {
+                var next = _queued.ToList();
+                _queued.Clear();
+                foreach (var e in next) e.Busy = null;
+                _ = Install(next);
+            }
         }
     }
 
