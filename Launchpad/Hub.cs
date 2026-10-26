@@ -64,6 +64,7 @@ public sealed class Hub
         {
             e.Installed = Detect.Find(e.App);
             e.Trial = e.Installed?.Trial == true ? TrialClock.Read(e.App.Id) : null;
+            e.Available ??= Feeds.Cached(e.App);
         }
         Changed?.Invoke();
     }

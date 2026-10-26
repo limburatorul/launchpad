@@ -147,11 +147,6 @@ public partial class MainWindow : Window
 
         var icon = new Image { Source = installed ? Theme.Icon(e.App.Id) : Theme.GreyIcon(e.App.Id), Width = 60, Height = 60, Margin = new Thickness(0, 0, 0, 9) };
         RenderOptions.SetBitmapScalingMode(icon, BitmapScalingMode.HighQuality);
-        if (!installed)
-        {
-            icon.Cursor = Cursors.Hand;
-            icon.MouseLeftButtonUp += (_, _) => Installer.Open(e.App.Page());
-        }
         stack.Children.Add(icon);
         stack.Children.Add(new TextBlock
         {
@@ -172,7 +167,25 @@ public partial class MainWindow : Window
             track.Children.Add(fill);
             stack.Children.Add(track);
         }
-        else stack.Children.Add(Action(e));
+        else
+        {
+            var action = Action(e);
+            stack.Children.Add(action);
+            if (!installed)
+            {
+                // the icon does what the button says (Install / Try free); the app's page is the small About link below
+                icon.Cursor = Cursors.Hand;
+                icon.MouseLeftButtonUp += (_, _) => action.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            }
+        }
+
+        if (!installed)
+        {
+            var about = new Button { Content = "About ↗", Style = Theme.LinkButton, FontSize = 11.5, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 0) };
+            AutomationProperties.SetName(about, $"{e.App.Name}'s page");
+            about.Click += (_, _) => Installer.Open(e.App.Page());
+            stack.Children.Add(about);
+        }
 
         if (e.OfferDays && e.App.TrialOffer is not null)
         {
@@ -248,10 +261,16 @@ public partial class MainWindow : Window
         }
         else
         {
-            // nothing known to install yet (offline, or no check so far): the app's page
-            button = new Button { Content = "See page", Style = Theme.GhostButton };
-            button.Click += (_, _) => Installer.Open(e.App.Page());
-            AutomationProperties.SetName(button, $"{e.App.Name} page");
+            // nothing known yet (the first run, before any check has come back): check now, then install; only when
+            // there is still nothing to install (offline) does the app's page open instead
+            button = new Button { Content = e.App.Paid ? "Try free" : "Install", Style = Theme.GhostButton };
+            button.Click += async (_, _) =>
+            {
+                await _hub.Check();
+                if (e.CanInstall) await _hub.Install([e]);
+                else Installer.Open(e.App.Page());
+            };
+            AutomationProperties.SetName(button, $"{(e.App.Paid ? "Try" : "Install")} {e.App.Name}");
         }
         button.Padding = new Thickness(0, 6, 0, 6);
         button.FontSize = 12;

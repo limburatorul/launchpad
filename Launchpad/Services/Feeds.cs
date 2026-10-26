@@ -49,6 +49,15 @@ public static class Feeds
         return feed is null ? null : FromSite(feed, app);
     }
 
+    /// <summary>The app's newest version from the last good answer saved on this PC, without asking anyone: what the
+    /// window shows from the first second, before the first check after start has come back.</summary>
+    public static Available? Cached(Product app)
+    {
+        if (app.Repo is { } repo)
+            return State.Feed($"{GitHubApi}/repos/{repo}/releases/latest").Body is { } body ? FromGitHub(body, app.Asset) : null;
+        return State.Feed($"{Site}/{app.Id}/latest.json").Body is { } feed ? FromSite(feed, app) : null;
+    }
+
     internal static Available? FromGitHub(string json, Func<string, bool> pick)
     {
         try

@@ -277,6 +277,15 @@ public static class SelfTest
             var feed = Feeds.FromSite($$"""{"version":"1.15.0","trialSha256":"{{hex}}","setupSha256":"{{hex.ToUpperInvariant()}}","setupName":"Reel.Setup.1.15.0.exe"}""", reel);
             Check(feed?.Bought is { FileName: "Reel.Setup.1.15.0.exe", Url: "https://protagonistlabs.app/reel/order.php" } b && b.Sha256 == hex, "latest.json's bought installer: name, checksum, order.php");
             Check(Feeds.FromSite($$"""{"version":"1.15.0","setupSha256":"{{hex}}","setupName":"..\\evil.exe"}""", reel)?.Bought is null, "a setupName that isn't a plain file name is refused");
+            var savedState = State.File;
+            try
+            {
+                State.File = Path.Combine(temp, "state-cache.json");
+                Check(Feeds.Cached(reel) is null, "nothing saved yet: nothing known before the first check");
+                State.SetFeed("https://protagonistlabs.app/reel/latest.json", "\"e1\"", $$"""{"version":"1.15.0","trialSha256":"{{hex}}"}""");
+                Check(Feeds.Cached(reel) is { Version.Minor: 15, File: not null }, "the last saved answer is known from the first second (Try free works before any check)");
+            }
+            finally { State.File = savedState; }
 
             Entry E(string id, bool trial, (long, int)? clock, Available a) =>
                 new(Catalog.Find(id)!) { Installed = new Installed(@"C:\x\a.exe", new Version(1, 0, 0), trial), Trial = clock, Available = a };
@@ -335,7 +344,7 @@ public static class SelfTest
         Notice.Muted = true;
         var hub = new Hub();
         await hub.Check();
-        var window = new MainWindow(hub, (App)Application.Current) { Left = -20000, Top = -20000, ShowActivated = false, ShowInTaskbar = false };
+        var window = new MainWindow(hub, (App)Application.Current) { Left = -20000, Top = -20000, Height = 1300, ShowActivated = false, ShowInTaskbar = false };
         window.Show();
         Save(window.Content as FrameworkElement, Path.Combine(folder, "window.png"));
         var reel = Catalog.Find("reel")!;
