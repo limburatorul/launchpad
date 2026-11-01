@@ -172,7 +172,10 @@ public static class Installer
         // the bought installer's checksum comes from latest.json; Shelf has one public installer for every copy
         var expected = kind == JobKind.Bought && app.Repo is null ? latest?.Bought : latest?.File;
         if (expected is null || !Path.GetFileName(file!).Equals(expected.FileName, StringComparison.OrdinalIgnoreCase))
+        {
+            AppLog.Write($"{app.Name}: no checksum to check {Path.GetFileName(file!)} against (found {expected?.FileName ?? "none"})");
             return new Outcome(false, "Couldn't check the download. Try again later.");
+        }
 
         var staged = Stage(file!, expected, staging);
         if (staged is null) return new Outcome(false, "The download didn't match. Try again.");

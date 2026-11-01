@@ -24,6 +24,7 @@ public static class Feeds
 {
     private static readonly HttpClient Http = CreateClient();
     internal static string GitHubApi = "https://api.github.com";
+    internal static string GitHubWeb = "https://github.com";
     internal static string Site = "https://protagonistlabs.app";
     internal static string Downloads = "https://github.com/limburatorul/protagonist-downloads/releases/download";
     private static DateTime _lastSiteRequest = DateTime.MinValue;
@@ -48,7 +49,9 @@ public static class Feeds
         if (app.Repo is { } repo)
         {
             var body = await Get($"{GitHubApi}/repos/{repo}/releases/latest", fresh);
-            return body is null ? null : FromGitHub(body, app.Asset);
+            if (body is not null) return FromGitHub(body, app.Asset);
+            // the elevated installer must have a checksum nobody on this PC wrote: with the API's 60 an hour used up, GitHub's release page says the same
+            return fresh ? await FromReleasePage(repo, app.Asset) : null;
         }
         var feed = await Get($"{Site}/{app.Id}/latest.json", fresh, site: true);
         return feed is null ? null : FromSite(feed, app);
@@ -61,6 +64,28 @@ public static class Feeds
         if (app.Repo is { } repo)
             return State.Feed($"{GitHubApi}/repos/{repo}/releases/latest").Body is { } body ? FromGitHub(body, app.Asset) : null;
         return State.Feed($"{Site}/{app.Id}/latest.json").Body is { } feed ? FromSite(feed, app) : null;
+    }
+
+    /// <summary>The latest release from github.com's own pages, which aren't under the API's limit. A page that reads differently gives null, and nothing is installed.</summary>
+    private static async Task<Available?> FromReleasePage(string repo, Func<string, bool> pick)
+    {
+        try
+        {
+            using var latest = await Http.GetAsync($"{GitHubWeb}/{repo}/releases/latest");
+            if (!latest.IsSuccessStatusCode || latest.RequestMessage?.RequestUri?.Segments[^1] is not { } tag) return null;
+            using var assets = await Http.GetAsync($"{GitHubWeb}/{repo}/releases/expanded_assets/{tag}");
+            return assets.IsSuccessStatusCode ? FromAssetsPage(tag, await assets.Content.ReadAsStringAsync(), repo, pick) : null;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException) { return null; }
+    }
+
+    internal static Available? FromAssetsPage(string tag, string html, string repo, Func<string, bool> pick)
+    {
+        if (Detect.Parse(tag) is not { } version) return null;
+        foreach (Match m in Regex.Matches(html, @"/releases/download/[^/""]+/([^""/]+)""[\s\S]*?sha256:([0-9a-f]{64})"))
+            if (pick(m.Groups[1].Value))
+                return new Available(version, "", new Download($"{GitHubWeb}/{repo}/releases/download/{tag}/{m.Groups[1].Value}", m.Groups[1].Value, m.Groups[2].Value, null));
+        return null;
     }
 
     internal static Available? FromGitHub(string json, Func<string, bool> pick)

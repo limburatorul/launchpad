@@ -102,6 +102,17 @@ public static class SelfTest
 
     private static void RateLimit(string temp)
     {
+        const string Page = """
+            <a href="/limburatorul/x/releases/download/v1.6.4/Other-1.6.4.zip" rel="nofollow"><span>Other</span></a>
+            <span class="Truncate-text">sha256:1111111111111111111111111111111111111111111111111111111111111111</span>
+            <a href="/limburatorul/x/releases/download/v1.6.4/BackupLabs-1.6.4-setup.exe" rel="nofollow"><span>Setup</span></a>
+            <span class="Truncate-text">sha256:23578496b324e4b6cec1d1b05e447e88f92d262cf9a5ec65b0d58fe2c3b15899</span>
+            <a href="/limburatorul/x/archive/refs/tags/v1.6.4.zip" rel="nofollow">Source code</a>
+            """;
+        var paged = Feeds.FromAssetsPage("v1.6.4", Page, "limburatorul/x", n => n.EndsWith("-setup.exe"));
+        Check(paged is { Version.Minor: 6, File: { FileName: "BackupLabs-1.6.4-setup.exe", Sha256: "23578496b324e4b6cec1d1b05e447e88f92d262cf9a5ec65b0d58fe2c3b15899" } }, "with the API refused, the release page gives the right file's checksum");
+        Check(Feeds.FromAssetsPage("v1.6.4", "<html>changed</html>", "limburatorul/x", _ => true) is null, "a release page that reads differently gives nothing, so nothing is installed");
+
         var now = new DateTime(2026, 11, 1, 10, 0, 0, DateTimeKind.Utc);
         long In(int seconds) => new DateTimeOffset(now).ToUnixTimeSeconds() + seconds;
         Check(Feeds.RefusedUntil(HttpStatusCode.Forbidden, "0", In(600).ToString(), null, now) == now.AddMinutes(10), "403 with none left: ends at the reset");
@@ -398,7 +409,7 @@ public static class SelfTest
         Directory.CreateDirectory(folder);
         Notice.Muted = true;
         var hub = new Hub();
-        await hub.Check();
+        hub.Scan();      // the saved answers: a picture isn't worth the connection's 60 GitHub requests an hour
         var window = new MainWindow(hub, (App)Application.Current) { Left = -20000, Top = -20000, Height = 1300, ShowActivated = false, ShowInTaskbar = false };
         window.Show();
         Save(window.Content as FrameworkElement, Path.Combine(folder, "window.png"));
