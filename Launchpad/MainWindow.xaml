@@ -15,6 +15,8 @@
         <Border Background="{StaticResource Side}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0">
             <DockPanel Margin="12,18,12,16">
                 <StackPanel DockPanel.Dock="Bottom" Margin="12,0,4,0">
+                    <Button x:Name="Pizza" Style="{StaticResource PrimaryButton}" Background="#D63A3A" Content="&#x1F355; Buy me a pizza" Margin="-12,0,-4,16"
+                            AutomationProperties.Name="Buy me a pizza" ToolTip="Optional. It goes toward code signing and a Steam listing." />
                     <CheckBox x:Name="StartWithWindows" Style="{StaticResource Toggle}" Content="Start with Windows" FontSize="12" />
                     <TextBlock x:Name="Checked" Foreground="{StaticResource TextMute}" FontSize="12" Margin="0,12,0,4" TextWrapping="Wrap" />
                     <WrapPanel>
