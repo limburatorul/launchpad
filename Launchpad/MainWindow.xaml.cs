@@ -51,6 +51,7 @@ public partial class MainWindow : Window
 
     private void RenderChecked() =>
         Checked.Text = _hub.Checking ? "Checking for updates…"
+            : Feeds.LimitedUntil is { } until ? $"GitHub is limiting checks from this connection. Trying again at {until.ToLocalTime():HH:mm}."
             : State.LastCheck is { } last ? $"Checked {Ago(DateTime.UtcNow - last)}" : "Not checked yet";
 
     private static string Ago(TimeSpan t) => t.TotalMinutes < 1 ? "just now"

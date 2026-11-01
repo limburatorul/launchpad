@@ -28,6 +28,11 @@ public static class Feeds
     internal static string Downloads = "https://github.com/limburatorul/protagonist-downloads/releases/download";
     private static DateTime _lastSiteRequest = DateTime.MinValue;
     private static readonly SemaphoreSlim SiteGate = new(1, 1);
+    private static DateTime _limitedUntil;
+
+    /// <summary>Until when GitHub refuses this PC's requests (its 60 an hour are shared by everything on the connection),
+    /// or null. Until then the feeds answer from the last good answer and the window says so.</summary>
+    public static DateTime? LimitedUntil => _limitedUntil > DateTime.UtcNow ? _limitedUntil : null;
 
     private static HttpClient CreateClient()
     {
@@ -111,9 +116,21 @@ public static class Feeds
         return "";
     }
 
+    /// <summary>When a GitHub answer is a rate limit, the moment it ends: Retry-After, or X-RateLimit-Reset once none are
+    /// left. Any other refusal gives null, and a far-off time counts as an hour: the headers decide nothing beyond a retry.</summary>
+    internal static DateTime? RefusedUntil(HttpStatusCode status, string? remaining, string? reset, string? retryAfter, DateTime now)
+    {
+        if (status is not (HttpStatusCode.Forbidden or HttpStatusCode.TooManyRequests)) return null;
+        long seconds = 0;
+        if (long.TryParse(retryAfter, out long wait)) seconds = wait;
+        else if (remaining == "0" && long.TryParse(reset, out long at)) seconds = at - new DateTimeOffset(now).ToUnixTimeSeconds();
+        return seconds > 0 ? now.AddSeconds(Math.Min(seconds, 3600)) : null;
+    }
+
     private static async Task<string?> Get(string url, bool fresh, bool site = false)
     {
         var (etag, cached) = fresh ? (null, null) : State.Feed(url);
+        if (!site && !fresh && cached is not null && LimitedUntil is not null) return cached;
         if (site) await SiteGate.WaitAsync();
         try
         {
@@ -127,7 +144,13 @@ public static class Feeds
             if (etag is not null && cached is not null) request.Headers.TryAddWithoutValidation("If-None-Match", etag);
             using var response = await Http.SendAsync(request);
             if (response.StatusCode == HttpStatusCode.NotModified && cached is not null) return cached;
-            if (!response.IsSuccessStatusCode) return cached;      // 403 rate limit, 404 no release yet, 5xx: the last good answer
+            if (!response.IsSuccessStatusCode)                     // 403 rate limit, 404 no release yet, 5xx: the last good answer
+            {
+                string? Header(string name) => response.Headers.TryGetValues(name, out var values) ? values.FirstOrDefault() : null;
+                if (!site && RefusedUntil(response.StatusCode, Header("X-RateLimit-Remaining"), Header("X-RateLimit-Reset"), Header("Retry-After"), DateTime.UtcNow) is { } until)
+                    _limitedUntil = until;
+                return cached;
+            }
             var body = await response.Content.ReadAsStringAsync();
             if (body.Length > 2 << 20) return cached;
             if (!fresh) State.SetFeed(url, response.Headers.ETag?.ToString(), body);

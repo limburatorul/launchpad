@@ -10,6 +10,7 @@
 - **1.2.2:** **Try free** and **Install** work from the first second: right after Launchpad started, an app you don't have showed "See page" until the first check came back; now Launchpad remembers the last answers, and if it knows nothing yet, the button checks first and then installs. The icon does the same as the button, and the app's web page is the small **About** link.
 - **1.2.3:** while one app downloads, the rest of the window works: **Update** on another app puts it next in line (its card says *Waiting*) instead of doing nothing, and every other button answers as usual.
 - **1.2.4:** the sidebar has a **Buy me a pizza** button. It's optional, it opens a page in your browser, and it goes toward code signing and a Steam listing.
+- **1.2.5:** when GitHub limits requests from your connection, Launchpad says so instead of showing an old answer as if it were current, and checks again by itself as soon as the limit ends.
 
 ## 1.1 | 2026-10-26 | Your paid apps update from here too
 Launchpad now knows which of your apps you've bought, and installs their updates with the rest.

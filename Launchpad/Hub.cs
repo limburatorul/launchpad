@@ -58,6 +58,8 @@ public sealed class Hub
     /// <summary>Apps asked for while a batch runs: they go next, as their own batch, instead of being ignored.</summary>
     private readonly List<Entry> _queued = [];
 
+    private bool _retrying;
+
     public IEnumerable<Entry> Updates => Entries.Where(e => e.HasUpdate);
     public IEnumerable<Entry> InstalledApps => Entries.Where(e => e.Installed is not null);
     public IEnumerable<Entry> Missing => Entries.Where(e => e.Installed is null);
@@ -87,7 +89,8 @@ public sealed class Hub
             await Task.WhenAll(Entries.Select(async e => e.Available = await Feeds.Latest(e.App) ?? e.Available));
             State.LastCheck = DateTime.UtcNow;
             State.Save();
-            AppLog.Write($"Checked: {Updates.Count()} updates, {Entries.Count(e => e.Available is null)} feeds without an answer");
+            AppLog.Write($"Checked: {Updates.Count()} updates, {Entries.Count(e => e.Available is null)} feeds without an answer"
+                + (Feeds.LimitedUntil is { } until ? $"; GitHub is refusing requests until {until.ToLocalTime():HH:mm}, so its apps show the last answer" : ""));
         }
         finally
         {
@@ -95,6 +98,17 @@ public sealed class Hub
             Changed?.Invoke();
         }
         PostNotices();
+        RetryAfterLimit();
+    }
+
+    /// <summary>A check GitHub refused runs again when its limit ends, not at the next one six hours later.</summary>
+    private async void RetryAfterLimit()
+    {
+        if (_retrying || Feeds.LimitedUntil is not { } until) return;
+        _retrying = true;
+        await Task.Delay(until - DateTime.UtcNow + TimeSpan.FromSeconds(30));
+        _retrying = false;
+        await ((App)System.Windows.Application.Current).CheckNow();
     }
 
     public Task UpdateAll() => Install(Updates.Where(e => e.UpdatesHere).ToList());

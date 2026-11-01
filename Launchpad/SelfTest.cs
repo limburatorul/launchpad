@@ -1,4 +1,5 @@
 using System.IO;
+using System.Net;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Reflection;
@@ -35,6 +36,7 @@ public static class SelfTest
             Staging(temp);
             Registration(temp);
             Counting();
+            RateLimit(temp);
         }
         catch (Exception ex) { Check(false, $"crashed: {ex}"); }
         finally
@@ -96,6 +98,51 @@ public static class SelfTest
     }
 
     private const string Hex = "5b8ab856f4639d368bc110f38bcd1fc4810291e45b8b025ca0aa81850c8daeca";
+
+    private static void RateLimit(string temp)
+    {
+        var now = new DateTime(2026, 11, 1, 10, 0, 0, DateTimeKind.Utc);
+        long In(int seconds) => new DateTimeOffset(now).ToUnixTimeSeconds() + seconds;
+        Check(Feeds.RefusedUntil(HttpStatusCode.Forbidden, "0", In(600).ToString(), null, now) == now.AddMinutes(10), "403 with none left: ends at the reset");
+        Check(Feeds.RefusedUntil(HttpStatusCode.TooManyRequests, null, null, "60", now) == now.AddMinutes(1), "429: Retry-After");
+        Check(Feeds.RefusedUntil(HttpStatusCode.Forbidden, "12", In(600).ToString(), null, now) is null, "403 with requests left isn't the limit");
+        Check(Feeds.RefusedUntil(HttpStatusCode.NotFound, "0", In(600).ToString(), null, now) is null, "404 isn't the limit");
+        Check(Feeds.RefusedUntil(HttpStatusCode.Forbidden, "0", "soon", null, now) is null && Feeds.RefusedUntil(HttpStatusCode.Forbidden, "0", In(-5).ToString(), null, now) is null, "a broken or past reset: no wait");
+        Check(Feeds.RefusedUntil(HttpStatusCode.Forbidden, "0", In(999999).ToString(), null, now) == now.AddHours(1), "a far-off reset counts as an hour");
+
+        // the real path: GitHub refuses, the wait is remembered, and the next request isn't sent
+        int port = 49731, asked = 0;
+        using var server = new HttpListener();
+        server.Prefixes.Add($"http://localhost:{port}/");
+        server.Start();
+        _ = Task.Run(async () =>
+        {
+            while (server.IsListening)
+            {
+                var context = await server.GetContextAsync();
+                asked++;
+                context.Response.StatusCode = 403;
+                context.Response.Headers["X-RateLimit-Remaining"] = "0";
+                context.Response.Headers["X-RateLimit-Reset"] = (DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 600).ToString();
+                context.Response.Close();
+            }
+        });
+        var app = Catalog.Find("sysoptimizer")!;
+        var api = Feeds.GitHubApi;
+        var savedState = State.File;
+        State.File = Path.Combine(temp, "state-limit.json");
+        Feeds.GitHubApi = $"http://localhost:{port}";
+        try
+        {
+            State.SetFeed($"{Feeds.GitHubApi}/repos/{app.Repo}/releases/latest", "\"tag\"", """{"tag_name":"v1.2.3","assets":[]}""");
+            var first = Task.Run(() => Feeds.Latest(app)).GetAwaiter().GetResult();
+            Check(first?.Version == new Version(1, 2, 3) && asked == 1, "refused: the last good answer");
+            Check(Feeds.LimitedUntil is { } until && until > DateTime.UtcNow.AddMinutes(9) && until <= DateTime.UtcNow.AddMinutes(10), "refused: the wait is known");
+            var second = Task.Run(() => Feeds.Latest(app)).GetAwaiter().GetResult();
+            Check(second?.Version == new Version(1, 2, 3) && asked == 1, "while refused, GitHub isn't asked again");
+        }
+        finally { Feeds.GitHubApi = api; State.File = savedState; server.Stop(); }
+    }
 
     private static void FeedsParse()
     {
