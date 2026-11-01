@@ -30,7 +30,7 @@ public sealed record Product(string Id, string Name, string Blurb, bool Paid, st
         "stash" => ("$4.99", "$3.99", "TRIALEND"),
         "reel" => ("$4.99", "$3.99", "TRIALEND"),
         "frostpane" => ("$7.99", "$6.39", "TRIALEND"),
-        "planner" => ("$24.99", "$19.99", "TRIALEND"),
+        "planner" => ("$14.99", "$11.99", "TRIALEND"),
         "reminder" => ("$24.99", "$19.99", "TRIALEND"),
         _ => null,
     };
@@ -53,7 +53,7 @@ public static class Catalog
         new("shelf", "Shelf", "Every game from every launcher", true, "Shelf.exe", Kind.Nsis, "limburatorul/shelf-releases", Is("Shelf-Trial-Setup.exe"), "93869666-a03d-5775-ba3a-19dde48e73bc"),
         new("stash", "Stash", "Thunderbird backups on a schedule", true, "Stash.exe", Kind.Inno, null, None, "{9C1E7A3B-5F2D-4C8B-9E61-3A7D2B1F0C44}_is1"),
         new("frostpane", "Frostpane", "Glass panes for your desktop icons", true, "Frostpane.exe", Kind.Inno, null, None, "{82C24B45-5C50-4728-BB6B-5B2134B44C5C}_is1"),
-        new("reel", "Reel", "Your films, with posters and where you stopped", true, "Reel.exe", Kind.Nsis, null, None, "95693626-e8c4-5132-9e4f-6f4a12169be6"),
+        new("reel", "Reel", "Your films, and where you stopped", true, "Reel.exe", Kind.Nsis, null, None, "95693626-e8c4-5132-9e4f-6f4a12169be6"),
         new("planner", "Planner", "Plans and tasks on one board", true, "Planner.exe", Kind.Zip, null, None, null),
         new("reminder", "Reminder", "Reminders and a daily digest", true, "Reminder.exe", Kind.Nsis, null, None, null),
         new("filelabs", "File Labs", "A file manager with tabs and previews", false, "FileLabs.exe", Kind.Inno, "limburatorul/file-labs", Ends("-setup.exe"), "{7E4C2B9A-3F1D-4C8E-9A6B-51D0C2E8F4A7}_is1"),
@@ -67,6 +67,7 @@ public static class Catalog
         new("hotkeyscan", "HotkeyScan", "Finds which app holds a shortcut", false, "HotkeyScan.exe", Kind.Portable, "limburatorul/hotkeyscan", Is("HotkeyScan.exe"), null),
         new("autoclicker", "Auto Clicker", "Clicks and keys on repeat", false, "Auto Clicker.exe", Kind.Portable, "limburatorul/auto-clicker", Is("Auto.Clicker.exe"), null),
         new("cursorselector", "Cursor Selector", "Change your mouse cursors in one click", false, "CursorSelector.exe", Kind.Portable, "limburatorul/cursor-selector", Is("CursorSelector.exe"), null),
+        new("nexus", "Nexus", "One keyboard and mouse across your PCs", false, "nexus.exe", Kind.Nsis, "limburatorul/nexus", n => n.StartsWith("Nexus-Setup-", StringComparison.OrdinalIgnoreCase) && n.EndsWith(".exe", StringComparison.OrdinalIgnoreCase), "Nexus"),
     ];
 
     public static Product? Find(string id) => All.FirstOrDefault(a => a.Id == id);

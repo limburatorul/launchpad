@@ -80,19 +80,20 @@ public static class SelfTest
             ["autoclicker"] = ["Auto.Clicker.exe"],
             ["cursorselector"] = ["Cursor-Selector-1.4.1-with-cursors.zip", "CursorSelector.exe"],
             ["shelf"] = ["Shelf-Setup.exe", "Shelf-Trial-Setup.exe", "Shelf.Setup.4.5.5.exe"],
+            ["nexus"] = ["Nexus-Setup-0.6.0.exe"],
         };
         var want = new Dictionary<string, string>
         {
             ["filelabs"] = "FileLabs-1.0.53-setup.exe", ["sysoptimizer"] = "Sysoptimizer-1.21.2-setup.exe", ["lume"] = "Lume-0.5.2-x64.exe",
             ["steamradar"] = "SteamRadar-0.9.1-setup.exe", ["glaze"] = "Glaze-Setup-2.2.1.exe", ["uproot"] = "Uproot-1.0.5-setup.exe",
-            ["hotkeyscan"] = "HotkeyScan.exe", ["autoclicker"] = "Auto.Clicker.exe", ["cursorselector"] = "CursorSelector.exe", ["shelf"] = "Shelf-Trial-Setup.exe",
+            ["hotkeyscan"] = "HotkeyScan.exe", ["autoclicker"] = "Auto.Clicker.exe", ["cursorselector"] = "CursorSelector.exe", ["shelf"] = "Shelf-Trial-Setup.exe", ["nexus"] = "Nexus-Setup-0.6.0.exe",
         };
         foreach (var (id, names) in releases)
         {
             var picked = names.Where(Catalog.Find(id)!.Asset).ToList();
             Check(picked.Count == 1 && picked[0] == want[id], $"{id} picks {want[id]} (got {string.Join(", ", picked)})");
         }
-        Check(Catalog.All.Count == 17 && Catalog.All.All(a => a.Id != "hikcheck"), "17 apps, HikCheck stays private");
+        Check(Catalog.All.Count == 18 && Catalog.All.All(a => a.Id != "hikcheck"), "18 apps, HikCheck stays private");
         Check(Catalog.All.Where(a => a.Paid).All(a => a.TrialOffer is not null && (a.Id == "shelf" || a.TrialFile is not null)), "every paid app has its offer and a trial file");
         Check(Catalog.Find("shelf")!.BuyPage.Contains("code=SHELFTRIAL") && Catalog.Find("reel")!.BuyPage.Contains("code=TRIALEND&buy=1"), "buy links carry the trial codes");
     }

@@ -11,6 +11,9 @@
 - **1.2.3:** while one app downloads, the rest of the window works: **Update** on another app puts it next in line (its card says *Waiting*) instead of doing nothing, and every other button answers as usual.
 - **1.2.4:** the sidebar has a **Buy me a pizza** button. It's optional, it opens a page in your browser, and it goes toward code signing and a Steam listing.
 - **1.2.5:** when GitHub limits requests from your connection, Launchpad says so instead of showing an old answer as if it were current, and checks again by itself as soon as the limit ends.
+- **1.2.5:** every card now says what the app does, so you can choose without going to the site.
+- **1.2.5:** **Nexus** is here too: one keyboard and mouse across your PCs.
+- **1.2.5:** Planner's trial offer shows its new price, $14.99, or $11.99 with the 20% off.
 
 ## 1.1 | 2026-10-26 | Your paid apps update from here too
 Launchpad now knows which of your apps you've bought, and installs their updates with the rest.

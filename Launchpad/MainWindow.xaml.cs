@@ -144,7 +144,6 @@ public partial class MainWindow : Window
             BorderThickness = new Thickness(1),
             Background = e.HasUpdate ? Theme.UpdateCard : Theme.Card,
             BorderBrush = e.HasUpdate ? new SolidColorBrush(Color.FromRgb(0x7b, 0x5c, 0xff)) : Theme.Line,
-            ToolTip = e.App.Blurb,
         };
         var layer = new Grid();
         var stack = new StackPanel();
@@ -158,6 +157,9 @@ public partial class MainWindow : Window
             Text = e.App.Name, FontSize = 13.5, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis, Foreground = installed ? Theme.Text : Theme.TextDim,
         });
+
+        // what the app does, in two lines on every card, so nobody has to go to the site to find out
+        stack.Children.Add(new TextBlock { Text = e.App.Blurb, Foreground = Theme.TextDim, FontSize = 11, LineHeight = 14, MinHeight = 28, Margin = new Thickness(0, 3, 0, 4), TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap });
 
         var (status, brush) = Status(e);
         var statusText = new TextBlock { Text = status, Foreground = brush, FontSize = 11.5, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 2, 0, 10), TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = status };
@@ -211,7 +213,7 @@ public partial class MainWindow : Window
                 Child = new TextBlock { Text = TrialClock.Label(e.Trial?.Left), FontSize = 10, FontWeight = FontWeights.SemiBold, Foreground = Theme.Warn },
             });
         card.Child = layer;
-        AutomationProperties.SetName(card, $"{e.App.Name}, {status}");
+        AutomationProperties.SetName(card, $"{e.App.Name}, {e.App.Blurb}, {status}");
         return card;
     }
 
