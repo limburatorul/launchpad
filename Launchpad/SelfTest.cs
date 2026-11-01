@@ -227,6 +227,10 @@ public static class SelfTest
         Check(TrialClock.Read(app)?.Left == 1, "the clock turned back: 'seen' still counts (1 left), registry copy alone is enough");
         TrialClock.Now = () => start + 20 * 86400;
         Check(TrialClock.Read(app)?.Left == 0, "after 20 days: ended");
+        TrialClock.Now = () => start - 3650L * 86400;
+        Write(Good(start, start), null);
+        Check(TrialClock.Read(app)?.Left == 0, "a start far ahead: ended");
+        TrialClock.Now = () => start + 20 * 86400;
         Write(Good(start, start + 100).Replace($"{start}|", $"{start + 5 * 86400}|"), null);
         Check(TrialClock.Read(app) is null, "a start moved without a new signature: not believed");
         Write(Good(start, start + 100), "garbage");

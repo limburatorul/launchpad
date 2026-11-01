@@ -53,6 +53,7 @@ public static class TrialClock
         if (!string.IsNullOrWhiteSpace(file) && Parse(app, file, machine) is null) return null;
         var record = Parse(app, registry, machine) ?? Parse(app, file, machine);
         if (record is not { } r) return null;
+        if (r.Start > Now() + 2 * 86400) return (r.Start, 0); // the same rule as the apps
         long used = Math.Max(0, Math.Max(Now(), r.Seen) - r.Start) / 86400;
         return (r.Start, (int)Math.Clamp(Days - used, 0, Days));
     }
