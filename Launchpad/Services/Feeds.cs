@@ -17,7 +17,7 @@ public sealed record Available(Version Version, string Notes, Download? File, Do
 /// <summary>
 /// Where the versions come from (vault Launchpad.md §3), all of it already published: GitHub's latest release for the free
 /// apps and Shelf, the site's /&lt;app&gt;/latest.json for the other paid apps, their trials from protagonist-downloads.
-/// GitHub is asked with If-None-Match, since a 304 doesn't count against its 60 requests an hour; the site one request
+/// GitHub is asked with If-None-Match to save the download, but without an Authorization header even a 304 counts against its 60 requests an hour; the site one request
 /// at a time, a second apart (Imunify bans the IP on bursts). A failed request falls back to the last good answer.
 /// </summary>
 public static class Feeds
