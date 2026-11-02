@@ -197,6 +197,12 @@ public static class SelfTest
             Check(Ecosystem.Card("unc") is null, "a UNC exe is refused (never touched)");
             Check(Ecosystem.Card("gone") is null && Ecosystem.Card("schema2") is null && Ecosystem.Card("broken") is null && Ecosystem.Card("none") is null,
                 "missing exe, other schema, broken JSON, no card: all 'not there'");
+            var savedState = State.File;
+            State.File = Path.Combine(temp, "state-card.json");
+            Card("autoclicker", $"{{\"schema\":1,\"exe\":{System.Text.Json.JsonSerializer.Serialize(exe)},\"version\":\"1.1.1\"}}");
+            State.SetInstalledVersion("autoclicker", new Version(1, 1, 2));
+            Check(Detect.Find(Catalog.Find("autoclicker")!)?.Version == new Version(1, 1, 2), "a card the app hasn't rewritten since Launchpad updated it shows the installed version");
+            State.File = savedState;
             Check(!Paths.IsLocal(@"\\?\C:\x") && !Paths.IsLocal(@"\\.\pipe\x") && !Paths.IsLocal("x.exe") && Paths.IsLocal(@"C:\x"), "only X:\\ paths are local");
         }
         finally { Ecosystem.Folder = saved; }

@@ -20,8 +20,9 @@ public static class Detect
     {
         var card = Ecosystem.Card(app.Id);
         var entry = FromRegistry(app);
+        // a portable or zip app has no Uninstall entry: what Launchpad last installed stands in for it (Auto Clicker 1.1.2 kept showing as 1.1.1)
         if (card is { } c)
-            return new Installed(c.Exe, Max(Parse(c.Version), entry?.Version), c.Edition == "trial");
+            return new Installed(c.Exe, Max(Max(Parse(c.Version), entry?.Version), State.InstalledVersion(app.Id)), c.Edition == "trial");
         if (entry is not null) return entry;
         var own = Path.Combine(app.Folder, app.Exe);
         if (File.Exists(own)) return new Installed(own, State.InstalledVersion(app.Id) ?? FileVersion(own), false);
