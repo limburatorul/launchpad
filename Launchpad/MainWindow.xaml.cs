@@ -31,6 +31,7 @@ public partial class MainWindow : Window
         CheckNow.Click += async (_, _) => await app.CheckNow();
         WhatsNew.Click += (_, _) => WhatsNewWindow.Open();
         Pizza.Click += (_, _) => Installer.Open("https://buymeacoffee.com/protagonistlabs");
+        Nudge.Attach(Pizza, this);
         foreach (var filter in new[] { ShowAll, ShowUpdates, ShowInstalled, ShowMissing }) filter.Checked += (_, _) => Render();
         HeroButton.Click += async (_, _) => await _hub.UpdateAll();
         _hub.Changed += Render;
