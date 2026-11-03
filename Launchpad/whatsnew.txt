@@ -16,6 +16,7 @@
 - **1.2.5:** Planner's trial offer shows its new price, $14.99, or $11.99 with the 20% off.
 - **1.2.6:** **Update** works while GitHub limits requests from your connection. Launchpad used to stop with "Couldn't check the download"; now it finds the checksum on the app's GitHub release page and installs.
 - **1.2.8:** an app Launchpad has just updated no longer asks for the same update again. Auto Clicker and Planner kept showing their old version until you opened them once; now Launchpad trusts the version it installed.
+- **1.2.9:** the red **Buy me a pizza** button gives a gentle double pulse every 10 seconds, so it's easier to notice, and turns a lighter red under the pointer. It stays still while you hover it or when Windows' animations are off. Chipping in is optional, and every free app stays free.
 
 ## 1.1 | 2026-10-26 | Your paid apps update from here too
 Launchpad now knows which of your apps you've bought, and installs their updates with the rest.
