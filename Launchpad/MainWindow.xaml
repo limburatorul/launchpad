@@ -64,6 +64,18 @@
                         </StackPanel>
                     </DockPanel>
                 </Border>
+                <!-- the next big Shelf, until its release is out; then it goes by itself -->
+                <Border x:Name="Teaser" Background="#1A1530" BorderBrush="#3B2A60" BorderThickness="1" CornerRadius="14" Padding="20,14" Margin="0,0,0,8">
+                    <DockPanel>
+                        <Button x:Name="TeaserLink" DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="See Shelf ↗" VerticalAlignment="Center" Margin="16,0,0,0"
+                                AutomationProperties.Name="Shelf's page" />
+                        <Image x:Name="TeaserIcon" DockPanel.Dock="Left" Width="44" Height="44" Margin="0,0,16,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Shelf 6.6.6 is on its way" FontSize="16" FontWeight="SemiBold" />
+                            <TextBlock Text="The biggest Shelf update so far, and it's nearly ready." Foreground="#C9C3E0" Margin="0,3,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
                 <StackPanel x:Name="Sections" />
             </StackPanel>
         </ScrollViewer>

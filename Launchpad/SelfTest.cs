@@ -93,8 +93,9 @@ public static class SelfTest
             var picked = names.Where(Catalog.Find(id)!.Asset).ToList();
             Check(picked.Count == 1 && picked[0] == want[id], $"{id} picks {want[id]} (got {string.Join(", ", picked)})");
         }
-        Check(Catalog.All.Count == 18 && Catalog.All.All(a => a.Id != "hikcheck"), "18 apps, HikCheck stays private");
-        Check(Catalog.All.Where(a => a.Paid).All(a => a.TrialOffer is not null && (a.Id == "shelf" || a.TrialFile is not null)), "every paid app has its offer and a trial file");
+        Check(Catalog.All.Count == 19 && Catalog.Find("hikcheck") is { Paid: true, TrialFile: "HikCheck-Trial.exe" }, "19 apps, HikCheck among the paid ones");
+        Check(Catalog.All.Where(a => a.Paid).All(a => (a.TrialOffer is not null || a.Id == "hikcheck") && (a.Id == "shelf" || a.TrialFile is not null)), "every paid app has its trial file, and its offer (HikCheck has none)");
+        Check(!Catalog.Find("hikcheck")!.BuyPage.Contains("code=") && Catalog.Find("stash")!.BuyPage.Contains("code=TRIALEND"), "a buy link carries a code only when the app has one");
         Check(Catalog.Find("shelf")!.BuyPage.Contains("code=SHELFTRIAL") && Catalog.Find("reel")!.BuyPage.Contains("code=TRIALEND&buy=1"), "buy links carry the trial codes");
     }
 
@@ -123,7 +124,9 @@ public static class SelfTest
         Check(Feeds.RefusedUntil(HttpStatusCode.Forbidden, "0", In(999999).ToString(), null, now) == now.AddHours(1), "a far-off reset counts as an hour");
 
         // the real path: GitHub refuses, the wait is remembered, and the next request isn't sent
-        int port = 49731, asked = 0;
+        // a free port the OS picks: Windows reserves ranges of fixed ones after a restart (49726-49825 on 07.11)
+        var probe = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        probe.Start(); int port = ((System.Net.IPEndPoint)probe.LocalEndpoint).Port, asked = 0; probe.Stop();
         using var server = new HttpListener();
         server.Prefixes.Add($"http://localhost:{port}/");
         server.Start();

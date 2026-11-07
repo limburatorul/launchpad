@@ -32,6 +32,8 @@ public partial class MainWindow : Window
         WhatsNew.Click += (_, _) => WhatsNewWindow.Open();
         Pizza.Click += (_, _) => Installer.Open("https://buymeacoffee.com/protagonistlabs");
         Nudge.Attach(Pizza, this);
+        TeaserIcon.Source = Theme.Icon("shelf");
+        TeaserLink.Click += (_, _) => Installer.Open(Catalog.Find("shelf")!.Page("teaser"));
         foreach (var filter in new[] { ShowAll, ShowUpdates, ShowInstalled, ShowMissing }) filter.Checked += (_, _) => Render();
         HeroButton.Click += async (_, _) => await _hub.UpdateAll();
         _hub.Changed += Render;
@@ -74,6 +76,8 @@ public partial class MainWindow : Window
         CountMissing.Text = missing.Count.ToString();
         RenderChecked();
         RenderHero(updates);
+        Teaser.Visibility = ShowAll.IsChecked == true && _hub.Entries.FirstOrDefault(e => e.App.Id == "shelf")?.Available?.Version is not { Major: >= 6 }
+            ? Visibility.Visible : Visibility.Collapsed;
 
         Sections.Children.Clear();
         _bars.Clear();
@@ -243,9 +247,10 @@ public partial class MainWindow : Window
         Button button;
         if (e.Installed is not null && e.TrialEnded)
         {
-            button = new Button { Content = "Buy · 20% off", Style = Theme.PrimaryButton };
+            // HikCheck has no end-of-trial code: a plain Buy
+            button = new Button { Content = e.App.TrialOffer is null ? "Buy" : "Buy · 20% off", Style = Theme.PrimaryButton };
             button.Click += (_, _) => Installer.Open(e.App.BuyPage);
-            AutomationProperties.SetName(button, $"Buy {e.App.Name} with 20% off");
+            AutomationProperties.SetName(button, e.App.TrialOffer is null ? $"Buy {e.App.Name}" : $"Buy {e.App.Name} with 20% off");
         }
         else if (e.Installed is not null && e.UpdatesHere)
         {

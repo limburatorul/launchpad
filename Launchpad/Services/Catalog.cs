@@ -20,7 +20,7 @@ public sealed record Product(string Id, string Name, string Blurb, bool Paid, st
     public string? TrialFile => Id switch
     {
         "reel" => "Reel-Trial-Setup.exe", "reminder" => "Reminder-Trial-Setup.exe", "stash" => "Stash-Trial-Setup.exe",
-        "frostpane" => "Frostpane-Trial.exe", "planner" => "Planner-Trial.zip", _ => null,
+        "frostpane" => "Frostpane-Trial.exe", "planner" => "Planner-Trial.zip", "hikcheck" => "HikCheck-Trial.exe", _ => null,
     };
 
     /// <summary>The paid apps' trial offer, as each app shows it (TRIAL_PRICE / Trial.Price): list price, price with the code, code.</summary>
@@ -35,7 +35,7 @@ public sealed record Product(string Id, string Name, string Blurb, bool Paid, st
         _ => null,
     };
 
-    public string BuyPage => $"https://protagonistlabs.app/{Id}/?utm_source=launchpad&utm_medium=app&utm_campaign=trial&code={TrialOffer?.Code}&buy=1";
+    public string BuyPage => $"https://protagonistlabs.app/{Id}/?utm_source=launchpad&utm_medium=app&utm_campaign=trial{(TrialOffer is { } o ? $"&code={o.Code}" : "")}&buy=1";
 
     /// <summary>Where Launchpad puts the app: the studio's one folder for programs (Ecosistem v3), portable ones included.</summary>
     public string Folder => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "ProtagonistLabs", Name);
@@ -47,7 +47,7 @@ public static class Catalog
     private static Func<string, bool> Is(string name) => n => n.Equals(name, StringComparison.OrdinalIgnoreCase);
     private static readonly Func<string, bool> None = _ => false;
 
-    /// <summary>The studio's apps in the order the site lists them, the paid ones first. HikCheck stays private.</summary>
+    /// <summary>The studio's apps in the order the site lists them, the paid ones first.</summary>
     public static readonly IReadOnlyList<Product> All =
     [
         new("shelf", "Shelf", "Every game from every launcher", true, "Shelf.exe", Kind.Nsis, "limburatorul/shelf-releases", Is("Shelf-Trial-Setup.exe"), "93869666-a03d-5775-ba3a-19dde48e73bc"),
@@ -56,6 +56,7 @@ public static class Catalog
         new("reel", "Reel", "Your films, and where you stopped", true, "Reel.exe", Kind.Nsis, null, None, "95693626-e8c4-5132-9e4f-6f4a12169be6"),
         new("planner", "Planner", "Plans and tasks on one board", true, "Planner.exe", Kind.Zip, null, None, null),
         new("reminder", "Reminder", "Reminders and a daily digest", true, "Reminder.exe", Kind.Nsis, null, None, null),
+        new("hikcheck", "HikCheck", "Diagnoses and fixes Hikvision DVRs", true, "HikCheck.exe", Kind.Inno, null, None, "{BC45085C-651E-481D-A86B-BE02A96FE3E6}_is1"),
         new("filelabs", "File Labs", "A file manager with tabs and previews", false, "FileLabs.exe", Kind.Inno, "limburatorul/file-labs", Ends("-setup.exe"), "{7E4C2B9A-3F1D-4C8E-9A6B-51D0C2E8F4A7}_is1"),
         new("backuplabs", "Backup Labs", "Backups on a schedule, to any drive", false, "BackupLabs.exe", Kind.Inno, "limburatorul/backup-labs", Ends("-setup.exe"), "{3B9E6A12-8C4D-4F7B-A1E5-6D2F0B8C9E34}_is1"),
         new("spacescan", "SpaceScan", "See what fills your drives", false, "SpaceScan.exe", Kind.Inno, "limburatorul/spacescan", Ends("-setup.exe"), "{5B7F3C21-9D4A-4E86-B0C7-2A9E6F1D8B53}_is1"),
