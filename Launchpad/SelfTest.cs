@@ -93,8 +93,8 @@ public static class SelfTest
             var picked = names.Where(Catalog.Find(id)!.Asset).ToList();
             Check(picked.Count == 1 && picked[0] == want[id], $"{id} picks {want[id]} (got {string.Join(", ", picked)})");
         }
-        Check(Catalog.All.Count == 19 && Catalog.Find("hikcheck") is { Paid: true, TrialFile: "HikCheck-Trial.exe" }, "19 apps, HikCheck among the paid ones");
-        Check(Catalog.All.Where(a => a.Paid).All(a => (a.TrialOffer is not null || a.Id == "hikcheck") && (a.Id == "shelf" || a.TrialFile is not null)), "every paid app has its trial file, and its offer (HikCheck has none)");
+        Check(Catalog.All.Count == 20 && Catalog.Find("cronlabs") is { Paid: true, TrialFile: "CronLabs-Trial-setup.exe" } && Catalog.Find("hikcheck") is { Paid: true, TrialFile: "HikCheck-Trial.exe" }, "20 apps, HikCheck and Cron Labs among the paid ones");
+        Check(Catalog.All.Where(a => a.Paid).All(a => (a.TrialOffer is not null || a.Id is "hikcheck" or "cronlabs") && (a.Id == "shelf" || a.TrialFile is not null)), "every paid app has its trial file and offer, except HikCheck and Cron Labs (no offer)");
         Check(!Catalog.Find("hikcheck")!.BuyPage.Contains("code=") && Catalog.Find("stash")!.BuyPage.Contains("code=TRIALEND"), "a buy link carries a code only when the app has one");
         Check(Catalog.Find("shelf")!.BuyPage.Contains("code=SHELFTRIAL") && Catalog.Find("reel")!.BuyPage.Contains("code=TRIALEND&buy=1"), "buy links carry the trial codes");
     }
