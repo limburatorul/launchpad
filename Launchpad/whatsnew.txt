@@ -20,6 +20,7 @@
 - **1.2.10:** **HikCheck** is here: it finds what's wrong with a Hikvision DVR or NVR and fixes it. Paid, with a 14-day trial you can start from its card.
 - **1.2.10:** something big is coming to Shelf. Watch for **Shelf 6.6.6** at the top of the window.
 - **1.2.11:** **Cron Labs** is on the list: scheduled jobs for Windows, on time or on events. Paid, with a 14-day trial you can start from its card, and Launchpad keeps it up to date.
+- **1.2.12:** **Spanwyse** is on the list: wallpapers that line up across monitors of different sizes. Free, one file, no installer.
 
 ## 1.1 | 2026-10-26 | Your paid apps update from here too
 Launchpad now knows which of your apps you've bought, and installs their updates with the rest.
