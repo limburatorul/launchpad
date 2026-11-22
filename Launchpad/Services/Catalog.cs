@@ -70,6 +70,7 @@ public static class Catalog
         new("autoclicker", "Auto Clicker", "Clicks and keys on repeat", false, "Auto Clicker.exe", Kind.Portable, "limburatorul/auto-clicker", Is("Auto.Clicker.exe"), null),
         new("cursorselector", "Cursor Selector", "Change your mouse cursors in one click", false, "CursorSelector.exe", Kind.Portable, "limburatorul/cursor-selector", Is("CursorSelector.exe"), null),
         new("nexus", "Nexus", "One keyboard and mouse across your PCs", false, "nexus.exe", Kind.Nsis, "limburatorul/nexus", n => n.StartsWith("Nexus-Setup-", StringComparison.OrdinalIgnoreCase) && n.EndsWith(".exe", StringComparison.OrdinalIgnoreCase), "Nexus"),
+        new("spanwyse", "Spanwyse", "Wallpapers that line up across monitors", false, "Spanwyse.exe", Kind.Portable, "limburatorul/spanwyse", Is("Spanwyse.exe"), null),
     ];
 
     public static Product? Find(string id) => All.FirstOrDefault(a => a.Id == id);

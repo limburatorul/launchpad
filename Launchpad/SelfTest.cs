@@ -86,14 +86,14 @@ public static class SelfTest
         {
             ["filelabs"] = "FileLabs-1.0.53-setup.exe", ["sysoptimizer"] = "Sysoptimizer-1.21.2-setup.exe", ["lume"] = "Lume-0.5.2-x64.exe",
             ["steamradar"] = "SteamRadar-0.9.1-setup.exe", ["glaze"] = "Glaze-Setup-2.2.1.exe", ["uproot"] = "Uproot-1.0.5-setup.exe",
-            ["hotkeyscan"] = "HotkeyScan.exe", ["autoclicker"] = "Auto.Clicker.exe", ["cursorselector"] = "CursorSelector.exe", ["shelf"] = "Shelf-Trial-Setup.exe", ["nexus"] = "Nexus-Setup-0.6.0.exe",
+            ["hotkeyscan"] = "HotkeyScan.exe", ["spanwyse"] = "Spanwyse.exe", ["autoclicker"] = "Auto.Clicker.exe", ["cursorselector"] = "CursorSelector.exe", ["shelf"] = "Shelf-Trial-Setup.exe", ["nexus"] = "Nexus-Setup-0.6.0.exe",
         };
         foreach (var (id, names) in releases)
         {
             var picked = names.Where(Catalog.Find(id)!.Asset).ToList();
             Check(picked.Count == 1 && picked[0] == want[id], $"{id} picks {want[id]} (got {string.Join(", ", picked)})");
         }
-        Check(Catalog.All.Count == 20 && Catalog.Find("cronlabs") is { Paid: true, TrialFile: "CronLabs-Trial-setup.exe" } && Catalog.Find("hikcheck") is { Paid: true, TrialFile: "HikCheck-Trial.exe" }, "20 apps, HikCheck and Cron Labs among the paid ones");
+        Check(Catalog.All.Count == 21 && Catalog.Find("cronlabs") is { Paid: true, TrialFile: "CronLabs-Trial-setup.exe" } && Catalog.Find("hikcheck") is { Paid: true, TrialFile: "HikCheck-Trial.exe" }, "21 apps, HikCheck and Cron Labs among the paid ones");
         Check(Catalog.All.Where(a => a.Paid).All(a => (a.TrialOffer is not null || a.Id is "hikcheck" or "cronlabs") && (a.Id == "shelf" || a.TrialFile is not null)), "every paid app has its trial file and offer, except HikCheck and Cron Labs (no offer)");
         Check(!Catalog.Find("hikcheck")!.BuyPage.Contains("code=") && Catalog.Find("stash")!.BuyPage.Contains("code=TRIALEND"), "a buy link carries a code only when the app has one");
         Check(Catalog.Find("shelf")!.BuyPage.Contains("code=SHELFTRIAL") && Catalog.Find("reel")!.BuyPage.Contains("code=TRIALEND&buy=1"), "buy links carry the trial codes");
