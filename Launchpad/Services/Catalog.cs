@@ -56,7 +56,7 @@ public static class Catalog
         new("reel", "Reel", "Your films, and where you stopped", true, "Reel.exe", Kind.Nsis, null, None, "95693626-e8c4-5132-9e4f-6f4a12169be6"),
         new("planner", "Planner", "Plans and tasks on one board", true, "Planner.exe", Kind.Zip, null, None, null),
         new("reminder", "Reminder", "Reminders and a daily digest", true, "Reminder.exe", Kind.Nsis, null, None, null),
-        new("cronlabs", "Cron Labs", "Scheduled jobs for Windows, on time or on events", true, "App\\CronLabs.Desktop.exe", Kind.Inno, null, None, "{B6716006-BA35-4A46-9E74-1B90A60C07AC}_is1"),
+        new("cronlabs", "Cron Labs", "Scheduled jobs, on time or on events", true, "App\\CronLabs.Desktop.exe", Kind.Inno, null, None, "{B6716006-BA35-4A46-9E74-1B90A60C07AC}_is1"),
         new("hikcheck", "HikCheck", "Diagnoses and fixes Hikvision DVRs", true, "HikCheck.exe", Kind.Inno, null, None, "{BC45085C-651E-481D-A86B-BE02A96FE3E6}_is1"),
         new("filelabs", "File Labs", "A file manager with tabs and previews", false, "FileLabs.exe", Kind.Inno, "limburatorul/file-labs", Ends("-setup.exe"), "{7E4C2B9A-3F1D-4C8E-9A6B-51D0C2E8F4A7}_is1"),
         new("backuplabs", "Backup Labs", "Backups on a schedule, to any drive", false, "BackupLabs.exe", Kind.Inno, "limburatorul/backup-labs", Ends("-setup.exe"), "{3B9E6A12-8C4D-4F7B-A1E5-6D2F0B8C9E34}_is1"),

@@ -14,10 +14,21 @@ public sealed class Entry(Product app)
     public double? Progress { get; set; }
     public Outcome? Last { get; set; }
 
-    public bool HasUpdate => Installed?.Version is { } v && Available?.Version is { } a && a > v;
+    /// <summary>A newer version is out for this copy. An ended trial never updates (Route), so it has none to show: its card offers Buy.</summary>
+    public bool HasUpdate => !TrialEnded && Installed?.Version is { } v && Available?.Version is { } a && a > v;
     public bool TrialEnded => Installed?.Trial == true && Trial is { Left: 0 };
     public bool CanInstall => Installed is null && Available?.File is not null;
     public bool OfferDays => Installed?.Trial == true && Trial is { Left: >= 1 and <= 3 };
+
+    /// <summary>The release's first line of notes, or "" when there is none worth showing: several feeds write only the
+    /// app's name and version ("Cron Labs 1.7.1"), which beside the name and version would say the same thing twice.</summary>
+    public string Note => Available is { } a && !OnlyNames(a.Notes, App.Name, a.Version) ? a.Notes : "";
+
+    internal static bool OnlyNames(string notes, string name, Version version)
+    {
+        var rest = notes.Replace(name, "", StringComparison.OrdinalIgnoreCase).Replace(version.ToString(3), "").Replace(version.ToString(2), "");
+        return !rest.Any(char.IsLetterOrDigit) || rest.Trim().Equals("v", StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>
     /// How Launchpad would install this app's newest version, or null when it can't (vault Ecosistem.md, contract v4):
@@ -59,6 +70,11 @@ public sealed class Hub
     private readonly List<Entry> _queued = [];
 
     private bool _retrying;
+    private Task? _check;
+
+    /// <summary>The last check reached no server (offline, or all of them down): what the window shows is older answers,
+    /// and it says so instead of "Checked just now".</summary>
+    public bool Offline { get; private set; }
 
     public IEnumerable<Entry> Updates => Entries.Where(e => e.HasUpdate);
     public IEnumerable<Entry> InstalledApps => Entries.Where(e => e.Installed is not null);
@@ -76,20 +92,31 @@ public sealed class Hub
         Changed?.Invoke();
     }
 
-    /// <summary>Asks every feed for the newest versions, then shows the notices that are due.</summary>
-    public async Task Check()
+    /// <summary>Asks every feed for the newest versions, then shows the notices that are due. While a check runs, asking
+    /// again gives that same check: whoever asked waits for its answer instead of going on without one.</summary>
+    public Task Check() => _check is { IsCompleted: false } ? _check : _check = RunCheck();
+
+    private async Task RunCheck()
     {
-        if (Checking) return;
         Checking = true;
         Changed?.Invoke();
         try
         {
             Scan();
+            int answered = Feeds.Answered;
+            var before = Entries.ToDictionary(e => e, e => e.Last);
             // GitHub answers in parallel; the site's feeds queue themselves a second apart inside Feeds
             await Task.WhenAll(Entries.Select(async e => e.Available = await Feeds.Latest(e.App) ?? e.Available));
-            State.LastCheck = DateTime.UtcNow;
-            State.Save();
-            AppLog.Write($"Checked: {Updates.Count()} updates, {Entries.Count(e => e.Available is null)} feeds without an answer"
+            Offline = Feeds.Answered == answered;
+            if (!Offline)
+            {
+                State.LastCheck = DateTime.UtcNow;
+                State.Save();
+                // a failure that was on a card before this check goes: the card is back to its version and its button.
+                // One from an install that ended while the check ran is new, and stays.
+                foreach (var e in Entries.Where(e => e.Busy is null && e.Last is not null && ReferenceEquals(e.Last, before[e]))) e.Last = null;
+            }
+            AppLog.Write(Offline ? "Checked: no server answered" : $"Checked: {Updates.Count()} updates, {Entries.Count(e => e.Available is null)} feeds without an answer"
                 + (Feeds.LimitedUntil is { } until ? $"; GitHub is refusing requests until {until.ToLocalTime():HH:mm}, so its apps show the last answer" : ""));
         }
         finally
@@ -99,6 +126,21 @@ public sealed class Hub
         }
         PostNotices();
         RetryAfterLimit();
+        RetryWhenOffline();
+    }
+
+    /// <summary>For an app nothing is known about yet (a first run): checks, or waits for the check already running, with
+    /// the app's card showing it instead of sitting still.</summary>
+    public async Task CheckFor(Entry e)
+    {
+        e.Busy = "Checking…"; e.Progress = null; e.Last = null;
+        Changed?.Invoke();
+        try { await Check(); }
+        finally
+        {
+            e.Busy = null;
+            Changed?.Invoke();
+        }
     }
 
     /// <summary>A check GitHub refused runs again when its limit ends, not at the next one six hours later.</summary>
@@ -111,7 +153,30 @@ public sealed class Hub
         await ((App)System.Windows.Application.Current).CheckNow();
     }
 
-    public Task UpdateAll() => Install(Updates.Where(e => e.UpdatesHere).ToList());
+    /// <summary>A check that reached nobody (the PC wasn't online yet at logon) runs again in five minutes, not at the
+    /// next one six hours later. GitHub's limit has its own wait, above.</summary>
+    private async void RetryWhenOffline()
+    {
+        if (_retrying || !Offline || Feeds.LimitedUntil is not null) return;
+        _retrying = true;
+        await Task.Delay(TimeSpan.FromMinutes(5));
+        _retrying = false;
+        // not when a check has been answered meanwhile (Check now, once the connection came up)
+        if (Offline && System.Windows.Application.Current is App app) await app.CheckNow();
+    }
+
+    /// <summary>What the button that installs the updates says, the same in the window, the tray and the notice: "Update"
+    /// for a single one, "Update all" when every update installs here, "Update N apps" when some only update themselves.</summary>
+    public static string UpdateLabel(int here, int total) =>
+        here != total ? $"Update {here} {(here == 1 ? "app" : "apps")}" : total == 1 ? "Update" : "Update all";
+
+    /// <summary>Started from the window, the tray or a notice: the window comes up, so the downloads and how they end can
+    /// be seen (from a notice or the tray nothing showed, and a failure stayed on a card nobody was looking at).</summary>
+    public Task UpdateAll()
+    {
+        ShowWindow?.Invoke();
+        return Install(Updates.Where(e => e.UpdatesHere).ToList());
+    }
 
     /// <summary>Installs or updates the apps, free and paid (trials and bought copies), one UAC prompt for the lot.</summary>
     public async Task Install(IReadOnlyList<Entry> entries)
@@ -199,9 +264,10 @@ public sealed class Hub
             Notice.Post(new NoticeContent(
                 fresh.Select(e => (System.Windows.Media.ImageSource)Theme.Icon(e.App.Id)).ToList(),
                 fresh.Count == 1 ? $"{fresh[0].App.Name} {fresh[0].Available!.Version.ToString(3)} is ready" : $"{fresh.Count} updates ready",
-                fresh.Count == 1 ? Fallback(fresh[0].Available!.Notes, "A new version is out.") : string.Join(", ", fresh.Select(e => e.App.Name)),
+                fresh.Count == 1 ? Fallback(fresh[0].Note, "A new version is out.") : string.Join(", ", fresh.Select(e => e.App.Name)),
                 null, null,
-                free ? (fresh.Count == 1 ? "Update" : "Update all") : "Show",
+                // the button installs every update that can be installed here, new or not, so it counts them all
+                free ? UpdateLabel(Updates.Count(e => e.UpdatesHere), Updates.Count()) : "Open Launchpad",
                 free ? () => _ = UpdateAll() : () => ShowWindow?.Invoke(),
                 () => ShowWindow?.Invoke(),
                 "updates:" + string.Join(",", fresh.Select(e => $"{e.App.Id}{e.Available!.Version}")),

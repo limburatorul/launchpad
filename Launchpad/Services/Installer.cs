@@ -29,6 +29,10 @@ public static class Installer
 {
     public static string DownloadFolder => Path.Combine(Ecosystem.Data, "downloads");
 
+    /// <summary>For a run that ended without saying why. It names neither an install nor an update: the same paths serve
+    /// both, and "Not installed" on the card of an app that is installed read as if it had been removed.</summary>
+    private const string Unfinished = "Couldn't finish. Try again.";
+
     /// <summary>Downloads every job's file, then installs them; reports each app's progress and outcome as it goes.</summary>
     public static async Task<Dictionary<string, Outcome>> Run(IReadOnlyList<Job> jobs, Action<string, string, double?> progress, CancellationToken token)
     {
@@ -112,14 +116,14 @@ public static class Installer
             var answer = Ecosystem.Read(result);
             foreach (var (job, _) in ready)
                 outcomes[job.App.Id] = answer?[job.App.Id] is JsonObject o && o["ok"] is JsonValue ok && ok.TryGetValue(out bool done)
-                    ? new Outcome(done, Ecosystem.Text(o, "message") ?? (done ? "Installed" : "Not installed"))
-                    : new Outcome(false, "Not installed");
+                    ? new Outcome(done, Ecosystem.Text(o, "message") ?? (done ? "Installed" : Unfinished))
+                    : new Outcome(false, Unfinished);
             return outcomes;
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)       // the UAC prompt was declined
         {
             AppLog.Write("Install: UAC declined");
-            return ready.ToDictionary(r => r.Job.App.Id, _ => new Outcome(false, "Update not installed"));
+            return ready.ToDictionary(r => r.Job.App.Id, _ => new Outcome(false, "You didn't allow the changes, so nothing was installed."));
         }
         finally
         {
@@ -165,8 +169,8 @@ public static class Installer
 
     private static Outcome InstallOne(Product app, string? file, JobKind kind, string staging)
     {
-        if (app.Paid == (kind == JobKind.Free)) return new Outcome(false, "Not installed");      // free apps as Free, paid apps as Trial or Bought
-        if (!Paths.IsLocal(file)) return new Outcome(false, "Not installed");
+        if (app.Paid == (kind == JobKind.Free)) return new Outcome(false, Unfinished);      // free apps as Free, paid apps as Trial or Bought
+        if (!Paths.IsLocal(file)) return new Outcome(false, Unfinished);
         // on the thread pool: blocking the UI thread on an await that wants to come back to it hung 1.0.0's first real batch
         var latest = Task.Run(() => Feeds.Latest(app, fresh: true)).GetAwaiter().GetResult();
         // the bought installer's checksum comes from latest.json; Shelf has one public installer for every copy
@@ -188,7 +192,7 @@ public static class Installer
                 {
                     if (!setup.WaitForExit(TimeSpan.FromMinutes(15))) return new Outcome(false, "The installer is taking too long");
                     AppLog.Write($"{app.Name}: installer exited with {setup.ExitCode}");
-                    return setup.ExitCode == 0 ? new Outcome(true, "Installed") : new Outcome(false, $"Not installed (code {setup.ExitCode})");
+                    return setup.ExitCode == 0 ? new Outcome(true, "Installed") : new Outcome(false, "The installer stopped before it finished. Try again.");
                 }
             case Kind.Portable:
                 Directory.CreateDirectory(app.Folder);
@@ -202,7 +206,7 @@ public static class Installer
                 Shortcut(app);
                 return new Outcome(true, "Installed");
         }
-        return new Outcome(false, "Not installed");
+        return new Outcome(false, Unfinished);
     }
 
     /// <summary>Copies the file into the admin-only staging folder while hashing what is read, and keeps the source open,

@@ -28,8 +28,15 @@ public static class Feeds
     internal static string Site = "https://protagonistlabs.app";
     internal static string Downloads = "https://github.com/limburatorul/protagonist-downloads/releases/download";
     private static DateTime _lastSiteRequest = DateTime.MinValue;
+    /// <summary>The pause between two requests to the site; the self-test asks a local server and doesn't wait.</summary>
+    internal static TimeSpan SiteGap = TimeSpan.FromSeconds(1.2);
     private static readonly SemaphoreSlim SiteGate = new(1, 1);
     private static DateTime _limitedUntil;
+    private static int _answered;
+
+    /// <summary>How many feed requests a server has really answered (200 or 304) since Launchpad started. A check during
+    /// which this doesn't move reached nobody: the PC is offline, or every server is down.</summary>
+    public static int Answered => _answered;
 
     /// <summary>Until when GitHub refuses this PC's requests (its 60 an hour are shared by everything on the connection),
     /// or null. Until then the feeds answer from the last good answer and the window says so.</summary>
@@ -161,13 +168,14 @@ public static class Feeds
         {
             if (site)
             {
-                var wait = _lastSiteRequest.AddSeconds(1.2) - DateTime.UtcNow;
+                var wait = _lastSiteRequest + SiteGap - DateTime.UtcNow;
                 if (wait > TimeSpan.Zero) await Task.Delay(wait);
                 _lastSiteRequest = DateTime.UtcNow;
             }
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             if (etag is not null && cached is not null) request.Headers.TryAddWithoutValidation("If-None-Match", etag);
             using var response = await Http.SendAsync(request);
+            if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NotModified) Interlocked.Increment(ref _answered);
             if (response.StatusCode == HttpStatusCode.NotModified && cached is not null) return cached;
             if (!response.IsSuccessStatusCode)                     // 403 rate limit, 404 no release yet, 5xx: the last good answer
             {

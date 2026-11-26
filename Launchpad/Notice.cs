@@ -9,9 +9,10 @@ using System.Windows.Threading;
 
 namespace Launchpad;
 
-/// <summary>What a notice says and offers.</summary>
+/// <summary>What a notice says and offers. Later: the second button, left out when the notice only tells something
+/// and its one button is the answer ("OK").</summary>
 public sealed record NoticeContent(IReadOnlyList<ImageSource> Icons, string Title, string Body, string? OldPrice, string? NewPrice,
-                                   string Primary, Action OnPrimary, Action? OnOpen, string Key, Func<bool> FirstTime);
+                                   string Primary, Action OnPrimary, Action? OnOpen, string Key, Func<bool> FirstTime, bool Later = true);
 
 /// <summary>
 /// Launchpad's own notifications, drawn in its look instead of Windows' toasts (the user's choice, 26.10): a card in the
@@ -72,10 +73,14 @@ public sealed class Notice : Window
     private static bool CanInterrupt() => SHQueryUserNotificationState(out int state) != 0 || state == 5;
 
     private readonly string _key;
+    private readonly TextBlock _title;
+    private readonly string _spoken;
 
     private Notice(NoticeContent c)
     {
         _key = c.Key;
+        _spoken = $"{c.Title}. {c.Body}";
+        Title = c.Title;        // never drawn (no title bar): the name assistive technology finds the window by
         WindowStyle = WindowStyle.None;
         AllowsTransparency = true;
         Background = Brushes.Transparent;
@@ -120,14 +125,16 @@ public sealed class Notice : Window
         close.Click += (_, _) => Leave();
         DockPanel.SetDock(close, Dock.Right);
         top.Children.Add(close);
-        top.Children.Add(new TextBlock { Text = c.Title, FontSize = 15, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 8, 0) });
+        _title = new TextBlock { Text = c.Title, FontSize = 15, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 8, 0) };
+        top.Children.Add(_title);
         text.Children.Add(top);
         text.Children.Add(new TextBlock { Text = c.Body, Foreground = Theme.TextDim, FontSize = 13, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) });
         if (c.NewPrice is not null)
         {
             var price = new TextBlock { Margin = new Thickness(0, 8, 0, 0), FontSize = 13 };
             if (c.OldPrice is not null) price.Inlines.Add(new System.Windows.Documents.Run(c.OldPrice + "  ") { Foreground = Theme.TextMute, TextDecorations = TextDecorations.Strikethrough });
-            price.Inlines.Add(new System.Windows.Documents.Run(c.NewPrice) { FontSize = 18, FontWeight = FontWeights.Bold, Foreground = Theme.Accent });
+            // plain accent text, not the gradient: the gradient is for what can be pressed, and its violet end was 3.6:1 here
+            price.Inlines.Add(new System.Windows.Documents.Run(c.NewPrice) { FontSize = 18, FontWeight = FontWeights.Bold, Foreground = Theme.AccentText });
             price.Inlines.Add(new System.Windows.Documents.Run("  with 20% off") { Foreground = Theme.TextDim });
             text.Children.Add(price);
         }
@@ -137,7 +144,7 @@ public sealed class Notice : Window
         var later = new Button { Content = "Later", Style = Theme.GhostButton, Padding = new Thickness(14, 7, 14, 7), Margin = new Thickness(8, 0, 0, 0) };
         later.Click += (_, _) => Leave();
         buttons.Children.Add(primary);
-        buttons.Children.Add(later);
+        if (c.Later) buttons.Children.Add(later);
         text.Children.Add(buttons);
         grid.Children.Add(text);
         card.Child = grid;
@@ -177,6 +184,8 @@ public sealed class Notice : Window
         ((FrameworkElement)Content).RenderTransform = shift;
         shift.BeginAnimation(TranslateTransform.XProperty, slide);
         BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)));
+        // a notice never takes the focus, so a screen reader would otherwise never know it came
+        Theme.Say(_title, _spoken);
         _life.Start();
     }
 

@@ -72,6 +72,7 @@ public sealed class WhatsNewWindow : Window
         Icon = new BitmapImage(new Uri("pack://application:,,,/app.ico"));
         Width = 1240; Height = 720; MinWidth = 700; MinHeight = 420;     // room for the list and a 960 x 170 banner
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        Theme.DarkTitleBar(this);
         SetResourceReference(BackgroundProperty, "Ground");
         FontSize = 13;
         FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI");

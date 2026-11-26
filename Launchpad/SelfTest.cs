@@ -36,6 +36,9 @@ public static class SelfTest
             Staging(temp);
             Registration(temp);
             Counting();
+            Wording();
+            Layout();
+            Offline(temp);
             RateLimit(temp);
         }
         catch (Exception ex) { Check(false, $"crashed: {ex}"); }
@@ -365,7 +368,8 @@ public static class SelfTest
             var both = new Available(new Version(2, 0, 0), "", new Download("https://github.com/t", "T.exe", hex, null), new Download("https://protagonistlabs.app/reel/order.php", "Reel.Setup.2.0.0.exe", hex, null));
             Check(E("reel", false, null, both).Route?.Kind == JobKind.Bought, "a bought copy updates with the bought installer");
             Check(E("reel", true, (1, 5), both).Route?.Kind == JobKind.Trial, "a running trial updates with the trial");
-            Check(E("reel", true, (1, 0), both) is { Route: null, TrialEnded: true, UpdatesHere: false }, "an ended trial doesn't update");
+            Check(E("reel", true, (1, 0), both) is { Route: null, TrialEnded: true, UpdatesHere: false, HasUpdate: false }, "an ended trial doesn't update, and isn't counted as an update");
+            Check(E("reel", true, (1, 5), both).HasUpdate && E("reel", false, null, both).HasUpdate, "a running trial and a bought copy still are");
             Check(E("reel", false, null, both with { Bought = null }).Route is null, "no published bought checksum yet: the app updates itself");
             Check(E("filelabs", false, null, both).Route?.Kind == JobKind.Free, "a free app installs its release");
 
@@ -389,6 +393,111 @@ public static class SelfTest
             using (var w = new StreamWriter(archive.CreateEntry("Planner.exe").Open())) w.Write("flat");
         Installer.Unzip(zip, Path.Combine(temp, "Flat"));
         Check(File.ReadAllText(Path.Combine(temp, "Flat", "Planner.exe")) == "flat", "a zip without a top folder is extracted as it is");
+    }
+
+    /// <summary>The words put together from data: the notes beside an app's name, and the button that installs the updates.</summary>
+    private static void Wording()
+    {
+        static Entry With(string id, string notes, string version) => new(Catalog.Find(id)!) { Available = new Available(Detect.Parse(version)!, notes, null) };
+        Check(With("cronlabs", "Cron Labs 1.7.1", "1.7.1").Note == "" && With("hikcheck", "HikCheck v2.8.2", "2.8.2").Note == ""
+              && With("stash", "Stash 2.5", "2.5.0").Note == "" && With("reel", "", "1.0.0").Note == "",
+            "notes that only repeat the app's name and version aren't shown beside them");
+        Check(With("reminder", "Small fixes.", "1.7.1").Note == "Small fixes." && With("stash", "Stash 2.5.1: faster backups", "2.5.1").Note == "Stash 2.5.1: faster backups",
+            "notes that say something are kept as they are");
+        Check(Hub.UpdateLabel(1, 1) == "Update" && Hub.UpdateLabel(3, 3) == "Update all" && Hub.UpdateLabel(1, 3) == "Update 1 app" && Hub.UpdateLabel(2, 3) == "Update 2 apps",
+            "the button that installs updates: Update for one, Update all, or Update N apps when some update themselves");
+        int shown = 0;
+        new Hub { ShowWindow = () => shown++ }.UpdateAll().Wait();
+        Check(shown == 1, "updates started from the tray or a notice bring the window up");
+
+        // the two colours changed for contrast, measured where they are used: 4.5:1 is the least for text this small
+        static double Luminance(Color c)
+        {
+            static double Linear(byte v) => v / 255.0 <= 0.04045 ? v / 255.0 / 12.92 : Math.Pow((v / 255.0 + 0.055) / 1.055, 2.4);
+            return 0.2126 * Linear(c.R) + 0.7152 * Linear(c.G) + 0.0722 * Linear(c.B);
+        }
+        static double Ratio(Color a, Color b) => (Math.Max(Luminance(a), Luminance(b)) + 0.05) / (Math.Min(Luminance(a), Luminance(b)) + 0.05);
+        static Color Brush(string key) => ((SolidColorBrush)Application.Current.Resources[key]).Color;
+        Check(new[] { "Ground", "Side", "Card", "Hover" }.All(surface => Ratio(Brush("TextMute"), Brush(surface)) >= 4.5), "muted text has 4.5:1 on the ground, the sidebar, a card and the chosen filter");
+        Check(((LinearGradientBrush)Application.Current.Resources["Accent"]).GradientStops.All(stop => Ratio(Colors.White, stop.Color) >= 4.5), "white labels have 4.5:1 on both ends of the button gradient");
+    }
+
+    /// <summary>Every card's description fits the two lines a card gives it. A third line pushes that card's button below
+    /// the others in its row (Cron Labs in 1.2.11), so a description that is too long fails here, not on someone's screen.</summary>
+    private static void Layout()
+    {
+        static bool Fits(string blurb)
+        {
+            var text = MainWindow.Blurb(blurb);
+            text.FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI");       // the window's, which a card inherits
+            TextOptions.SetTextFormattingMode(text, TextFormattingMode.Display);
+            // a pixel narrower than the card's column: another display scale or font spaces the letters a little
+            // differently, and a description that only just fits here would wrap there
+            text.Measure(new Size(MainWindow.Column - 1, double.PositiveInfinity));
+            // a line is drawn a little taller than LineHeight (the font's own height wins), so two lines are about 29 and three about 44
+            return text.DesiredSize.Height - text.Margin.Top - text.Margin.Bottom <= text.LineHeight * 2.5;
+        }
+        var tooLong = Catalog.All.Where(a => !Fits(a.Blurb)).Select(a => a.Name).ToList();
+        Check(tooLong.Count == 0, $"every description fits two lines on its card{(tooLong.Count == 0 ? "" : ": not " + string.Join(", ", tooLong))}");
+        Check(!Fits("Scheduled jobs for Windows, on time or on events"), "a description of three lines is caught");
+    }
+
+    /// <summary>A check no server answers isn't recorded as a check, and the hub says so; an answered one is, and it
+    /// retires a failure left on a card. A local server stands in for GitHub and the site.</summary>
+    private static void Offline(string temp)
+    {
+        var probe = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        probe.Start(); int port = ((System.Net.IPEndPoint)probe.LocalEndpoint).Port; probe.Stop();
+        int status = 500;
+        var gate = new TaskCompletionSource();      // holds the first answers back, so the second Check below finds the first still running
+        using var server = new HttpListener();
+        server.Prefixes.Add($"http://localhost:{port}/");
+        server.Start();
+        _ = Task.Run(async () =>
+        {
+            while (server.IsListening)
+            {
+                try
+                {
+                    var context = await server.GetContextAsync();
+                    await gate.Task;
+                    context.Response.StatusCode = status;
+                    if (status == 200) context.Response.OutputStream.Write("{}"u8);
+                    context.Response.Close();
+                }
+                catch (Exception ex) when (ex is HttpListenerException or ObjectDisposedException or InvalidOperationException) { }     // one lost connection mustn't end the server, or every later request waits out its 30 s
+            }
+        });
+        var (api, site, gap, savedState, muted, log) = (Feeds.GitHubApi, Feeds.Site, Feeds.SiteGap, State.File, Notice.Muted, AppLog.File);
+        State.File = Path.Combine(temp, "state-offline.json");
+        AppLog.File = Path.Combine(temp, "launchpad.log");      // the checks below write "Checked: ..." lines, which aren't the user's
+        // Scan reads this PC's real apps (read only). Their trial clocks aren't read: Trials, earlier in Run, leaves
+        // TrialClock on its scratch roots, so no trial notice is built here.
+        Feeds.GitHubApi = Feeds.Site = $"http://localhost:{port}";
+        Feeds.SiteGap = TimeSpan.Zero;
+        Notice.Muted = true;        // a test never puts a notice on the user's screen
+        try
+        {
+            var hub = new Hub();
+            // off the UI thread, as the other network checks here: its awaits must not wait for the thread this test blocks
+            bool same = Task.Run(() =>
+            {
+                var first = hub.Check();
+                var second = hub.Check();
+                gate.SetResult();
+                first.Wait();
+                return ReferenceEquals(first, second);
+            }).GetAwaiter().GetResult();
+            Check(same, "a check asked for while one runs is that same check, so whoever asked waits for its answer");
+            Check(hub.Offline && State.LastCheck is null, "a check no server answered says so, and isn't recorded as a check");
+            hub.Entries[0].Last = new Outcome(false, "Couldn't download. Try again later.");
+            Task.Run(() => hub.Check()).GetAwaiter().GetResult();
+            Check(hub.Offline && hub.Entries[0].Last is not null, "still offline: a failure stays on its card");
+            status = 200;
+            Task.Run(() => hub.Check()).GetAwaiter().GetResult();
+            Check(!hub.Offline && State.LastCheck is not null && hub.Entries[0].Last is null, "an answered check is recorded, and retires the failure left on a card");
+        }
+        finally { Feeds.GitHubApi = api; Feeds.Site = site; Feeds.SiteGap = gap; State.File = savedState; Notice.Muted = muted; AppLog.File = log; server.Stop(); }
     }
 
     /// <summary>The download count Launchpad sends fits hit.php's checks (copied from it), or hit.php drops it silently.</summary>
@@ -432,6 +541,24 @@ public static class SelfTest
         Save(Notice.Preview(new NoticeContent([Theme.Icon("filelabs"), Theme.Icon("spacescan"), Theme.Icon("lume")], "3 updates ready", "File Labs, SpaceScan, Lume",
             null, null, "Update all", () => { }, () => { }, "y", () => true)), Path.Combine(folder, "notice-updates.png"));
         Save(PurchaseWindow.Preview(Catalog.Find("reminder")!), Path.Combine(folder, "purchase.png"));
+        Save(Notice.Preview(new NoticeContent([Theme.Icon("launchpad")], "Launchpad is still running", "It stays in the notification area to keep your apps up to date. Quit is in its icon's menu.",
+            null, null, "Got it", () => { }, null, "z", () => true, Later: false)), Path.Combine(folder, "notice-tray.png"));
+
+        // the states a healthy PC doesn't show, set in memory only: a failure on a card, no connection, a filter with nothing in it
+        if (hub.Entries.FirstOrDefault(e => e.Installed is not null && !e.HasUpdate) is { } failed)
+        {
+            failed.Last = new Outcome(false, "Couldn't check the download. Try again later.");
+            hub.Scan();
+            Save(window.Content as FrameworkElement, Path.Combine(folder, "window-failure.png"));
+            failed.Last = null;
+        }
+        typeof(Hub).GetProperty(nameof(Hub.Offline))!.SetValue(hub, true);
+        foreach (var e in hub.Entries) e.Available = null;      // no update known, so the Updates filter shows its "couldn't check" text
+        window.ShowUpdates.IsChecked = true;
+        Save(window.Content as FrameworkElement, Path.Combine(folder, "window-offline.png"));
+        typeof(Hub).GetProperty(nameof(Hub.Offline))!.SetValue(hub, false);
+        window.ShowMissing.IsChecked = true;
+        Save(window.Content as FrameworkElement, Path.Combine(folder, "window-not-installed.png"));
     }
 
     private static void Save(FrameworkElement? element, string path)

@@ -34,6 +34,7 @@ public sealed class PurchaseWindow : Window
         Title = $"Update {app.Name}";
         Width = 460; SizeToContent = SizeToContent.Height; ResizeMode = ResizeMode.NoResize;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        Theme.DarkTitleBar(this);
         Icon = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/app.ico"));
         SetResourceReference(BackgroundProperty, "Ground");
         Foreground = Theme.Text;
@@ -98,7 +99,7 @@ public sealed class PurchaseWindow : Window
         box.Background = new SolidColorBrush(Color.FromRgb(0x1a, 0x1c, 0x24));
         box.Foreground = Theme.Text;
         box.CaretBrush = Theme.Text;
-        box.BorderBrush = Theme.Line;
+        box.BorderBrush = Theme.TextMute;       // Line was 1.3:1 against the field: the box had no visible edge
         box.ToolTip = hint;
         AutomationProperties.SetName(box, label);
         panel.Children.Add(box);
@@ -115,6 +116,9 @@ public sealed class PurchaseWindow : Window
         {
             _error.Text = problem;
             _error.Visibility = Visibility.Visible;
+            // to the field that needs fixing, and said aloud: the text appearing under the fields moves nothing by itself
+            (txn is null ? _link : _email).Focus();
+            Theme.Say(_error, problem);
             return;
         }
         // kept now; if order.php doesn't know it, the install forgets it again and says so on the card

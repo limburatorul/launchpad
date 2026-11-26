@@ -31,7 +31,7 @@ public static class Updater
         if (!Installed || await Check() is not { } latest || latest.Version == _offered) return;
         _offered = latest.Version;
         Notice.Post(new NoticeContent([Theme.Icon("launchpad")], $"Launchpad {latest.Version.ToString(3)} is ready",
-            string.IsNullOrWhiteSpace(latest.Notes) ? "A new version of Launchpad is out." : latest.Notes, null, null,
+            Entry.OnlyNames(latest.Notes, "Launchpad", latest.Version) ? "A new version of Launchpad is out." : latest.Notes, null, null,
             "Update", () => _ = Install(latest, quit), null, "self:" + latest.Version, () => true));
     }
 
@@ -45,12 +45,15 @@ public static class Updater
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
         {
-            Notice.Post(new NoticeContent([Theme.Icon("launchpad")], "Update not installed", "Launchpad keeps running as it is. You can update it from Settings.",
-                null, null, "OK", () => { }, null, "self-declined:" + latest.Version, () => true));
+            Notice.Post(new NoticeContent([Theme.Icon("launchpad")], "Update not installed", "Launchpad keeps running as it is. The update is offered again the next time Launchpad starts.",
+                null, null, "OK", () => { }, null, "self-declined:" + latest.Version, () => true, Later: false));
         }
-        catch (Exception ex) when (ex is IOException or System.Net.Http.HttpRequestException or TaskCanceledException)
+        catch (Exception ex) when (ex is IOException or System.Net.Http.HttpRequestException or TaskCanceledException or Win32Exception or UnauthorizedAccessException)
         {
             AppLog.Write($"Self-update failed: {ex.Message}");
+            // the user pressed Update and its notice is gone: without this nothing would say the download failed
+            Notice.Post(new NoticeContent([Theme.Icon("launchpad")], "Couldn't download the update", "Launchpad keeps running as it is. The update is offered again the next time Launchpad starts.",
+                null, null, "OK", () => { }, null, "self-failed:" + latest.Version, () => true, Later: false));
         }
     }
 }

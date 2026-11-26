@@ -12,6 +12,10 @@ public partial class App : Application
     private Tray? _tray;
     private readonly DispatcherTimer _checks = new() { Interval = TimeSpan.FromHours(6) };
 
+    /// <summary>Launchpad is leaving (Quit, its own update, the end of the Windows session): a window closing now isn't
+    /// the user sending it to the tray.</summary>
+    public static bool Quitting { get; private set; }
+
     protected override void OnStartup(StartupEventArgs e)
     {
         if (e.Args.Contains("--selftest")) { Shutdown(SelfTest.Run()); return; }
@@ -29,6 +33,7 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += (_, args) => AppLog.Write($"Crash: {args.ExceptionObject}");
         TaskScheduler.UnobservedTaskException += (_, args) => AppLog.Write($"Error in background work: {args.Exception}");
         base.OnStartup(e);
+        SessionEnding += (_, _) => Quitting = true;
 
         _hub = new Hub { ShowWindow = ShowWindow, AskPurchase = e => PurchaseWindow.Ask(e.App, _window) };
         _tray = new Tray(_hub, ShowWindow, Quit);
@@ -76,6 +81,7 @@ public partial class App : Application
 
     public void Quit()
     {
+        Quitting = true;
         _tray?.Dispose();
         Shutdown();
     }

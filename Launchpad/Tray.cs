@@ -40,7 +40,7 @@ public sealed class Tray : IDisposable
         _icon.Icon = updates > 0 ? _badged : _plain;
         _icon.Text = updates switch { 0 => "Protagonist Labs Launchpad", 1 => "Launchpad: 1 update ready", _ => $"Launchpad: {updates} updates ready" };
         _updateAll.Visible = here > 0;
-        _updateAll.Text = here == 1 ? "Update 1 app" : $"Update {here} apps";
+        _updateAll.Text = Hub.UpdateLabel(here, updates);
     }
 
     /// <summary>The icon with the pink dot the window uses for "has an update", bottom right.</summary>

@@ -8,7 +8,8 @@
     <SolidColorBrush x:Key="Line" Color="#2C303B" />
     <SolidColorBrush x:Key="Text" Color="#ECEEF4" />
     <SolidColorBrush x:Key="TextDim" Color="#9AA0AE" />
-    <SolidColorBrush x:Key="TextMute" Color="#7A8090" />
+    <!-- the lightest grey that still reads as muted: 4.5:1 or more on every surface it is used on (cards, sidebar, a filter chosen or under the pointer, notices) -->
+    <SolidColorBrush x:Key="TextMute" Color="#8B91A1" />
     <SolidColorBrush x:Key="AccentText" Color="#C9B8FF" />
     <SolidColorBrush x:Key="Ok" Color="#3DDC97" />
     <SolidColorBrush x:Key="Warn" Color="#FFC35C" />
@@ -16,8 +17,10 @@
     <SolidColorBrush x:Key="Bad" Color="#FF7A8A" />
     <SolidColorBrush x:Key="Hover" Color="#262A35" />
     <LinearGradientBrush x:Key="Accent" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Offset="0" Color="#FF2BD6" />
-        <GradientStop Offset="1" Color="#7B5CFF" />
+        <!-- a shade deeper than the icons' own pink and violet (#FF2BD6, #7B5CFF), so white labels have 4.5:1 from end to end
+             (at rest; under the pointer a button dims a little, as before) -->
+        <GradientStop Offset="0" Color="#D61AB3" />
+        <GradientStop Offset="1" Color="#7858FC" />
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="HeroBack" StartPoint="0,0" EndPoint="1,0.6">
         <GradientStop Offset="0" Color="#3A1450" />
@@ -144,6 +147,9 @@
     </Style>
 
     <Style x:Key="NavButton" TargetType="RadioButton">
+        <!-- the filters are the first Tab stops, although the sidebar's footer comes before them in the file (a docked
+             panel has to). On the buttons themselves: a TabIndex on their panel changes nothing, the panel isn't a stop. -->
+        <Setter Property="TabIndex" Value="0" />
         <Setter Property="Foreground" Value="{StaticResource TextDim}" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="Cursor" Value="Hand" />
@@ -156,7 +162,8 @@
                         <ContentPresenter />
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="b" Property="Background" Value="#1FFFFFFF" /></Trigger>
+                        <!-- no lighter than the chosen filter's ground: the count beside the label has to stay readable on it -->
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="b" Property="Background" Value="#10FFFFFF" /></Trigger>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="b" Property="Background" Value="#262A35" />
                             <Setter Property="Foreground" Value="{StaticResource Text}" />

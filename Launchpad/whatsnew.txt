@@ -1,26 +1,33 @@
 # Every release's notes, newest first, shown by What's new (WhatsNewWindow.cs). Built into the exe.
-# "## version | date | title", one entry per x.y with its patches; then the notes: "- " a point,
+# "## version | date | title", one entry per x.y with its patches, the newest patch first (What's new opens at the
+# top of the entry, and whoever has just updated should find what's new there); then the notes: "- " a point,
 # a line in ** ** a heading, anything else a paragraph. A release with a picture of its own has
 # WhatsNew\<x.y>.jpg (1920 x 340, made from the studio's banner template, the month it came out); the others
 # show their month's picture, WhatsNew\m<MM>.jpg, which must exist for every month listed.
 
 ## 1.2 | 2026-10-26 | Counted, nothing more
-- When Launchpad downloads an app, it tells the site which one and how (installed, updated, trial or bought), so we can see how many people get our apps through Launchpad. It's the same anonymous count the site keeps for its own download buttons: no account, no address, nothing about your PC.
-- **1.2.1:** the pictures at the top of these notes for 1.1 and 1.2 were blank; now they show.
-- **1.2.2:** **Try free** and **Install** work from the first second: right after Launchpad started, an app you don't have showed "See page" until the first check came back; now Launchpad remembers the last answers, and if it knows nothing yet, the button checks first and then installs. The icon does the same as the button, and the app's web page is the small **About** link.
-- **1.2.3:** while one app downloads, the rest of the window works: **Update** on another app puts it next in line (its card says *Waiting*) instead of doing nothing, and every other button answers as usual.
-- **1.2.4:** the sidebar has a **Buy me a pizza** button. It's optional, it opens a page in your browser, and it goes toward code signing and a Steam listing.
+- **1.2.13:** when an install or an update fails, its card says why in full instead of cutting the sentence short, in plainer words, and goes back to normal at the next check.
+- **1.2.13:** without an internet connection, Launchpad says it couldn't reach the update servers and tries again a few minutes later. It used to say everything was up to date.
+- **1.2.13:** apps with an update come first. The banner no longer repeats an app's name when its release has no notes, and its button says **Update** when there's only one.
+- **1.2.13:** an update started from a notice or from the tray icon opens the window, so you can watch it and see if something goes wrong. And the first time you close the window, Launchpad tells you it's still running in the notification area.
+- **1.2.13:** easier with a keyboard or a screen reader: Tab starts at the filters, the focus stays on the app you were on, filters and cards say what they are, and a download is announced as it goes. The small grey text and the labels on the pink buttons are easier to read.
+- **1.2.13:** smaller fixes: **Not installed** says so when you already have every app, instead of showing an empty page; **Install** pressed during the very first check waits for it instead of opening the website; a trial that has ended no longer shows as an update; What's new and the purchase window have the dark title bar; and these notes now start with the newest.
+- **1.2.12:** **Spanwyse** is on the list: wallpapers that line up across monitors of different sizes. Free, one file, no installer.
+- **1.2.11:** **Cron Labs** is on the list: scheduled jobs for Windows, on time or on events. Paid, with a 14-day trial you can start from its card, and Launchpad keeps it up to date.
+- **1.2.10:** **HikCheck** is here: it finds what's wrong with a Hikvision DVR or NVR and fixes it. Paid, with a 14-day trial you can start from its card.
+- **1.2.10:** something big is coming to Shelf. Watch for **Shelf 6.6.6** at the top of the window.
+- **1.2.9:** the red **Buy me a pizza** button gives a gentle double pulse every 10 seconds, so it's easier to notice, and turns a lighter red under the pointer. It stays still while you hover it or when Windows' animations are off. Chipping in is optional, and every free app stays free.
+- **1.2.8:** an app Launchpad has just updated no longer asks for the same update again. Auto Clicker and Planner kept showing their old version until you opened them once; now Launchpad trusts the version it installed.
+- **1.2.6:** **Update** works while GitHub limits requests from your connection. Launchpad used to stop with "Couldn't check the download"; now it finds the checksum on the app's GitHub release page and installs.
 - **1.2.5:** when GitHub limits requests from your connection, Launchpad says so instead of showing an old answer as if it were current, and checks again by itself as soon as the limit ends.
 - **1.2.5:** every card now says what the app does, so you can choose without going to the site.
 - **1.2.5:** **Nexus** is here too: one keyboard and mouse across your PCs.
 - **1.2.5:** Planner's trial offer shows its new price, $14.99, or $11.99 with the 20% off.
-- **1.2.6:** **Update** works while GitHub limits requests from your connection. Launchpad used to stop with "Couldn't check the download"; now it finds the checksum on the app's GitHub release page and installs.
-- **1.2.8:** an app Launchpad has just updated no longer asks for the same update again. Auto Clicker and Planner kept showing their old version until you opened them once; now Launchpad trusts the version it installed.
-- **1.2.9:** the red **Buy me a pizza** button gives a gentle double pulse every 10 seconds, so it's easier to notice, and turns a lighter red under the pointer. It stays still while you hover it or when Windows' animations are off. Chipping in is optional, and every free app stays free.
-- **1.2.10:** **HikCheck** is here: it finds what's wrong with a Hikvision DVR or NVR and fixes it. Paid, with a 14-day trial you can start from its card.
-- **1.2.10:** something big is coming to Shelf. Watch for **Shelf 6.6.6** at the top of the window.
-- **1.2.11:** **Cron Labs** is on the list: scheduled jobs for Windows, on time or on events. Paid, with a 14-day trial you can start from its card, and Launchpad keeps it up to date.
-- **1.2.12:** **Spanwyse** is on the list: wallpapers that line up across monitors of different sizes. Free, one file, no installer.
+- **1.2.4:** the sidebar has a **Buy me a pizza** button. It's optional, it opens a page in your browser, and it goes toward code signing and a Steam listing.
+- **1.2.3:** while one app downloads, the rest of the window works: **Update** on another app puts it next in line (its card says *Waiting*) instead of doing nothing, and every other button answers as usual.
+- **1.2.2:** **Try free** and **Install** work from the first second: right after Launchpad started, an app you don't have showed "See page" until the first check came back; now Launchpad remembers the last answers, and if it knows nothing yet, the button checks first and then installs. The icon does the same as the button, and the app's web page is the small **About** link.
+- **1.2.1:** the pictures at the top of these notes for 1.1 and 1.2 were blank; now they show.
+- **1.2.0:** when Launchpad downloads an app, it tells the site which one and how (installed, updated, trial or bought), so we can see how many people get our apps through Launchpad. It's the same anonymous count the site keeps for its own download buttons: no account, no address, nothing about your PC.
 
 ## 1.1 | 2026-10-26 | Your paid apps update from here too
 Launchpad now knows which of your apps you've bought, and installs their updates with the rest.

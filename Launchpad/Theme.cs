@@ -1,4 +1,8 @@
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Automation;
+using System.Windows.Automation.Peers;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -24,6 +28,24 @@ public static class Theme
     public static Style GhostButton => Get<Style>("GhostButton");
     public static Style IconButton => Get<Style>("IconButton");
     public static Style LinkButton => Get<Style>("LinkButton");
+
+    /// <summary>The dark title bar Windows draws for dark apps, so every window's frame matches its ground. Asked for
+    /// when the window gets its handle, before it shows, so it never flashes light first.</summary>
+    public static void DarkTitleBar(Window window) => window.SourceInitialized += (_, _) =>
+    {
+        int on = 1;
+        DwmSetWindowAttribute(new WindowInteropHelper(window).Handle, 20, ref on, sizeof(int));
+    };
+
+    [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+
+    /// <summary>Tells a screen reader about something that changed without the focus moving: a download's phase, how it
+    /// ended, a notice, an error under a field. With no screen reader running it does nothing.</summary>
+    /// <paramref name="passing"/>: a step on the way (a download's phase), which the next one may replace unheard; the
+    /// rest (how it ended, a notice, an error) are each said in full.
+    public static void Say(UIElement from, string text, bool passing = false) =>
+        (UIElementAutomationPeer.FromElement(from) ?? UIElementAutomationPeer.CreatePeerForElement(from))?.RaiseNotificationEvent(AutomationNotificationKind.Other,
+            passing ? AutomationNotificationProcessing.ImportantMostRecent : AutomationNotificationProcessing.ImportantAll, text, passing ? "launchpad-phase" : "launchpad");
 
     private static readonly Dictionary<string, BitmapSource> Colour = new(), Grey = new();
 
